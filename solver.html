@@ -54,6 +54,8 @@ function F(x,d=6){x=Number(x);if(Number.isNaN(x))return '\\text{NA}';if(!isFinit
  if(Number.isInteger(x)&&Math.abs(x)<1e15)return (x<0?'-':'')+grp(String(Math.abs(x)));
  const a=Math.abs(x);if(a<1e-4||a>=1e15){const [m,e]=x.toExponential(d-1).split('e');return `${+m}\\cdot10^{${+e}}`;}
  return String(+x.toPrecision(d));}
+const FP=(x,d)=>x<0?`(${F(x,d)})`:F(x,d);
+const escH=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const tx=s=>String(s).replace(/[\\{}$&#_%^~]/g,m=>({'\\':'\\textbackslash ','^':'\\textasciicircum ','~':'\\textasciitilde '}[m]||'\\'+m));
 const lst=(a,max=8,sep=' + ')=>a.length<=max?a.join(sep):[...a.slice(0,max-2),'\\ldots',a[a.length-1]].join(sep);
 const rs=s=>'"'+String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"';
@@ -75,12 +77,13 @@ function makeG(vals,fields){
   num(id,o={}){const s=raw(id);if(s==='')bad(id,'unesite broj');const v=Number(s);if(!isFinite(v))bad(id,`„${s}“ nije valjan broj (koristite decimalnu točku)`);chk(id,v,o);return v;},
   numOpt(id,o={}){return raw(id)===''?null:g.num(id,o);},
   toks(id){return raw(id).split(/[\s,;]+/).filter(t=>t!=='');},
-  vec(id,o={}){const t=g.toks(id);if(t.length<(o.min??1))bad(id,`potrebno je barem ${o.min??1} vrijednosti`);
-   return t.map(s=>{const v=Number(s);if(!isFinite(v))bad(id,`„${s}“ nije broj`);chk(id,v,o);return v;});}};
+  vec(id,o={}){const {min:cnt=1,...vo}=o;const t=g.toks(id);if(t.length<cnt)bad(id,`potrebno je barem ${cnt} vrijednosti`);
+   return t.map(s=>{const v=Number(s);if(!isFinite(v))bad(id,`„${s}“ nije broj`);chk(id,v,vo);return v;});}};
  return g;}
 
 function parseOut(raw){const V={},out=[];for(const l of raw.split('\n')){const m=l.match(/^@@(\w+)=(.*)$/);if(m)V[m[1]]=m[2]===''?[]:m[2].split(',');else out.push(l);}return{V,text:out.join('\n').trim()};}
-const mkV=V=>({s:k=>V[k]||[],a:k=>(V[k]||[]).map(Number),x:k=>Number((V[k]||[])[0])});
+const pn=s=>s==='Inf'?Infinity:s==='-Inf'?-Infinity:Number(s);
+const mkV=V=>({s:k=>V[k]||[],a:k=>(V[k]||[]).map(pn),x:k=>pn((V[k]||[])[0])});
 const PRE=`rm(list = ls())\nH <- function(k, v) cat("@@", k, "=", paste(vapply(v, function(z) if (is.character(z)) z else format(z, digits = 12, trim = TRUE), ""), collapse = ","), "\\n", sep = "")\n`;
 
 /* ===================== GRAFOVI (SVG) ===================== */
@@ -113,7 +116,7 @@ function chartScatter(x,y,a,b){
 const hyp=(alt,m0,sym='\\mu')=>[L`H_0:\ ${sym}=${F(m0)}`,alt==='two.sided'?L`H_1:\ ${sym}\ne ${F(m0)}`:alt==='greater'?L`H_1:\ ${sym}>${F(m0)}`:L`H_1:\ ${sym}<${F(m0)}`];
 const ALT=[['two.sided','dvostrani (H₁: ≠)'],['greater','jednostrani (H₁: >)'],['less','jednostrani (H₁: <)']];
 const decide=(p,al)=>p<al?L`p=${F(p)}<\alpha=${F(al)}\ \Rightarrow\ \textbf{odbacujemo }H_0`:L`p=${F(p)}\ge\alpha=${F(al)}\ \Rightarrow\ \textbf{ne odbacujemo }H_0`;
-const critTex=(alt,name,df,al,crit)=>alt==='two.sided'?L`\text{kritična vrijednost: }|${name}|>${name==='t'?`t_{${df};\,${F(al/2)}}`:`z_{${F(al/2)}}`}=${F(crit)}`:alt==='greater'?L`\text{kritična vrijednost: }${name}>${name==='t'?`t_{${df};\,${F(al)}}`:`z_{${F(al)}}`}=${F(crit)}`:L`\text{kritična vrijednost: }${name}<-${name==='t'?`t_{${df};\,${F(al)}}`:`z_{${F(al)}}`}=${F(crit)}`;
+const critTex=(alt,name,df,al,crit)=>alt==='two.sided'?L`\text{kritična vrijednost: }|${name}|>${name==='t'?`t_{${df};\\,${F(al/2)}}`:`z_{${F(al/2)}}`}=${F(crit)}`:alt==='greater'?L`\text{kritična vrijednost: }${name}>${name==='t'?`t_{${df};\\,${F(al)}}`:`z_{${F(al)}}`}=${F(crit)}`:L`\text{kritična vrijednost: }${name}<-${name==='t'?`t_{${df};\\,${F(al)}}`:`z_{${F(al)}}`}=${F(crit)}`;
 const gridQ=(typ)=>({eq:'P(X = a)',le:'P(X ≤ a)',lt:'P(X < a)',ge:'P(X ≥ a)',gt:'P(X > a)',between:'P(a ≤ X ≤ b)',quant:'kvantil: x tako da je P(X ≤ x) = p (a = p)'}[typ]);
 const QOPT=['eq','le','lt','ge','gt','between','quant'].map(t=>[t,gridQ(t)]);
 
@@ -147,7 +150,7 @@ unifd:{lbl:'Diskretna uniformna Unif{a, b}',disc:true,par:[pr('a','a (cijeli bro
 norm:{lbl:'Normalna N(μ, σ²)',disc:false,par:[pr('mu','μ (očekivanje)',2,{}),pr('s2','σ² (varijanca, >0)',4,{gt:0})],
  def:P=>`mu <- ${P.mu}\ns2 <- ${P.s2}\ns <- sqrt(s2)`,dn:'dnorm(x, mu, s)',cdf:'pnorm(x, mu, s)',qf:'qnorm(x, mu, s)',g0:'mu - 4 * s',g1:'mu + 4 * s',ex:'mu',vr:'s2',
  form:L`f(x)=\frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}},\quad Z=\frac{X-\mu}{\sigma}\sim N(0,1),\quad P(a<X<b)=\Phi\!\left(\tfrac{b-\mu}{\sigma}\right)-\Phi\!\left(\tfrac{a-\mu}{\sigma}\right)`,
- cdfTex:(P,x,Fv,z)=>L`F(${F(x)})=\Phi\!\left(\frac{${F(x)}-${F(P.mu)}}{${F(Math.sqrt(P.s2))}}\right)=\Phi(${F(z)})=${F(Fv)}`,
+ cdfTex:(P,x,Fv,z)=>L`F(${F(x)})=\Phi\!\left(\frac{${F(x)}-${FP(P.mu)}}{${F(Math.sqrt(P.s2))}}\right)=\Phi(${F(z)})=${F(Fv)}`,
  qTex:(P,p,qv,z)=>L`x_p=\mu+\sigma\,\Phi^{-1}(p)=${F(P.mu)}+${F(Math.sqrt(P.s2))}\cdot(${F(z)})=${F(qv)}`,
  exT:P=>L`\mu=${F(P.mu)}`,vrT:P=>L`\sigma^2=${F(P.s2)}`},
 exp:{lbl:'Eksponencijalna Exp(λ)',disc:false,par:[pr('lambda','λ (>0)',0.25,{gt:0})],
@@ -161,7 +164,7 @@ unif:{lbl:'Neprekidna uniformna U(a, b)',disc:false,par:[pr('ua','a',-1,{}),pr('
  form:L`f(x)=\frac{1}{b-a}\ (a<x<b),\quad F(x)=\frac{x-a}{b-a};\qquad E(X)=\frac{a+b}{2},\quad \mathrm{Var}(X)=\frac{(b-a)^2}{12}`,
  cdfTex:(P,x,Fv)=>L`F(${F(x)})=\min\!\left(1,\max\!\left(0,\frac{${F(x)}-(${F(P.ua)})}{${F(P.ub)}-(${F(P.ua)})}\right)\right)=${F(Fv)}`,
  qTex:(P,p,qv)=>L`x_p=a+p(b-a)=${F(P.ua)}+${F(p)}\cdot${F(P.ub-P.ua)}=${F(qv)}`,
- exT:P=>L`\frac{a+b}{2}=\frac{${F(P.ua)}+${F(P.ub)}}{2}`,vrT:P=>L`\frac{(b-a)^2}{12}=\frac{${F((P.ub-P.ua)**2)}}{12}`,
+ exT:P=>L`\frac{a+b}{2}=\frac{${F(P.ua)}+${FP(P.ub)}}{2}`,vrT:P=>L`\frac{(b-a)^2}{12}=\frac{${F((P.ub-P.ua)**2)}}{12}`,
  check:P=>P.ub<=P.ua?'b mora biti veći od a':''},
 pareto:{lbl:'Paretova Pareto(x_m, α)',disc:false,par:[pr('xm','x_m (skala, >0)',1,{gt:0}),pr('alpha','α (oblik, >0)',3,{gt:0})],
  def:P=>`xm <- ${P.xm}\nalpha <- ${P.alpha}`,dn:'ifelse(x >= xm, alpha * (xm^alpha) / (x^(alpha + 1)), 0)',cdf:'ifelse(x >= xm, 1 - (xm / x)^alpha, 0)',qf:'xm * (1 - x)^(-1 / alpha)',g0:'xm',g1:'xm * 5',ex:'if (alpha > 1) alpha * xm / (alpha - 1) else Inf',vr:'if (alpha > 2) (xm^2 * alpha) / ((alpha - 1)^2 * (alpha - 2)) else Inf',
@@ -170,7 +173,6 @@ pareto:{lbl:'Paretova Pareto(x_m, α)',disc:false,par:[pr('xm','x_m (skala, >0)'
  qTex:(P,p,qv)=>L`x_p=${F(P.xm)}\cdot(1-${F(p)})^{-1/${F(P.alpha)}}=${F(qv)}`,
  exT:P=>P.alpha>1?L`\frac{\alpha x_m}{\alpha-1}=\frac{${F(P.alpha)}\cdot${F(P.xm)}}{${F(P.alpha-1)}}`:L`\infty`,vrT:P=>P.alpha>2?L`\frac{x_m^2\alpha}{(\alpha-1)^2(\alpha-2)}=${F((P.xm**2*P.alpha)/(((P.alpha-1)**2)*(P.alpha-2)))}`:L`\infty`}};
 
-const DEF_PAR={binom:[10,.5],pois:[3],geom:[.4],hyper:[4,48,5],unifd:[1,6],norm:[2,4],exp:[.25],unif:[-1,3],pareto:[1,3]};
 const distFields=()=>{const f=[S('dist','Razdioba',Object.entries(DIST).map(([k,d])=>[k,d.lbl]),'binom')];
  for(const [k,d] of Object.entries(DIST))d.par.forEach(p=>f.push(N(`${k}_${p.id}`,p.lbl,p.def,'',v=>v.dist===k)));
  f.push(S('typ','Što računamo',QOPT,'le'),N('q1','a (ili p za kvantil)',3),N('q2','b',5,'',v=>v.typ==='between'));return f;};
@@ -210,7 +212,7 @@ gx <- seq(${cfg.g0}, ${cfg.g1}, length.out = 200)
 H("q", q); H("EX", EX); H("VX", VX); H("Fa", Fa); H("Fb", Fb); H("za", za); H("zb", zb); H("zq", zq); H("gx", gx); H("gy", Dn(gx))`;
  }
  const tex=v=>{
-  const q=v.x('q'),EX=v.x('EX'),VX=v.x('VX'),st=[],an=[L`Razdioba: \(${tx(cfg.lbl)}\). Traži se: \(${tx(gridQ(typ))}\) uz \(a=${F(q1)}${typ==='between'?`,\ b=${F(q2)}`:''}\).`,
+  const q=v.x('q'),EX=v.x('EX'),VX=v.x('VX'),st=[],an=[L`Razdioba: \(\text{${tx(cfg.lbl)}}\). Traži se: \(\text{${tx(gridQ(typ))}}\) uz \(a=${F(q1)}${typ==='between'?`,\\ b=${F(q2)}`:''}\).`,
    'Parametri: '+cfg.par.map(p=>`\\(${tx(p.id)}=${F(P[p.id])}\\)`).join(', ')];
   if(cfg.disc){
    const ks=v.a('ks'),ps=v.a('ps'),slo=v.x('slo'),shi=v.x('shi'),tm=ps.map(z=>F(z,5)),s=sum(ps);
@@ -220,9 +222,9 @@ H("q", q); H("EX", EX); H("VX", VX); H("Fa", Fa); H("Fb", Fb); H("za", za); H("z
    else{
     const lw=typ==='le'?`P(X\\le ${q1})`:typ==='lt'?`P(X\\le ${q1-1})`:typ==='ge'?`P(X\\le ${q1-1})`:typ==='gt'?`P(X\\le ${q1})`:`P(${q1}\\le X\\le ${q2})`;
     const rest=typ==='ge'||typ==='gt';
-    if(rest)st.push(L`P(X${typ==='ge'?`\ge ${q1}`:`>${q1}`})=1-${lw}`);
+    if(rest)st.push(L`P(X${typ==='ge'?`\\ge ${q1}`:`>${q1}`})=1-${lw}`);
     st.push(ks.length?L`${lw}=\sum_{k=${ks[0]}}^{${ks[ks.length-1]}}P(X=k)=${lst(tm,8)}=${F(s)}`:L`${lw}=0\ \text{(prazan skup vrijednosti)}`);
-    if(rest)st.push(L`P(X${typ==='ge'?`\ge ${q1}`:`>${q1}`})=1-${F(s)}=${F(q)}`);
+    if(rest)st.push(L`P(X${typ==='ge'?`\\ge ${q1}`:`>${q1}`})=1-${F(s)}=${F(q)}`);
     if(ks.length&&ks.length<=6)st.push(...ks.map((k,i)=>L`P(X=${k})=${cfg.sub(P,k)}=${F(ps[i],6)}`));}
   }else{
    const Fa=v.x('Fa'),Fb=v.x('Fb'),za=v.x('za'),zb=v.x('zb'),zq=v.x('zq');
@@ -233,12 +235,13 @@ H("q", q); H("EX", EX); H("VX", VX); H("Fa", Fa); H("Fb", Fb); H("za", za); H("z
    else st.push(cfg.cdfTex(P,q1,Fa,za),cfg.cdfTex(P,q2,Fb,zb),L`P(${F(q1)}\le X\le ${F(q2)})=F(${F(q2)})-F(${F(q1)})=${F(Fb)}-${F(Fa)}=${F(q)}`);
   }
   st.push(L`E(X)=${cfg.exT(P)}=${F(EX)},\qquad \mathrm{Var}(X)=${cfg.vrT(P)}=${F(VX)}`);
-  return{analiza:an,formula:[cfg.form],steps:st,result:typ==='quant'?L`x_p=${F(q)}`:L`${gridQ(typ).replace('≤','\\le ').replace('≥','\\ge ').replace(/[ab]/g,m=>m)}\ \text{(za zadane vrijednosti)}=${F(q)}`};};
+  const R={eq:`P(X=${F(q1)})`,le:`P(X\\le ${F(q1)})`,lt:`P(X<${F(q1)})`,ge:`P(X\\ge ${F(q1)})`,gt:`P(X>${F(q1)})`,between:`P(${F(q1)}\\le X\\le ${F(q2)})`,quant:'x_p'};
+  return{analiza:an,formula:[cfg.form],steps:st,result:L`${R[typ]}=${F(q)}`};};
  return{code,hidden,tex,chart:v=>chartDist(v,cfg.disc,typ,q1,q2)};
 }
 
 /* ---- ostali problemi ---- */
-const vecIn=(id='podaci',lbl='Podaci (brojevi odvojeni zarezom ili razmakom)',def,tt)=>T(id,lbl,def,'npr. 24, 5, 9, 12 (decimalna točka)',undefined,tt);
+const vecIn=(id='podaci',lbl='Podaci (brojevi odvojeni zarezom ili razmakom)',def,tt,show)=>T(id,lbl,def,'npr. 24, 5, 9, 12 (decimalna točka)',show,tt);
 const CATS=[
 {id:'opisna',lbl:'1.1 Opisna statistika',probs:[
  {id:'freq',lbl:'Apsolutne i relativne frekvencije',fields:[T('podaci','Podaci (brojevi ili oznake)','A, 0, B, 0, 0, A, AB, 0, A, A','odvojeni zarezom/razmakom',undefined,'Apsolutna frekvencija (f_i) označava ukupan broj pojavljivanja pojedine vrijednosti u skupu podataka. Relativna frekvencija (f_i\') je udio pojavljivanja u ukupnom broju podataka (f_i / n).')],
@@ -259,7 +262,7 @@ const CATS=[
     formula:[L`\bar x=\frac1n\sum_{i=1}^n x_i,\qquad \tilde x=\begin{cases}x_{((n+1)/2)},&n\text{ neparan}\\ \frac{x_{(n/2)}+x_{(n/2+1)}}{2},&n\text{ paran}\end{cases},\qquad \text{mod}=\text{najčešća vrijednost}`],
     steps:[L`\bar x=\frac{${lst(X.map(F))}}{${n}}=\frac{${F(v.x('sum'))}}{${n}}=${F(v.x('mean'))}`,
      L`\text{Uređajna statistika (sortirano): }${lst(xs.map(F),12,',\ ')}`,
-     n%2?L`n=${n}\text{ neparan}\Rightarrow\tilde x=x_{(${(n+1)/2})}=${F(md)}`:L`n=${n}\text{ paran}\Rightarrow\tilde x=\frac{x_{(${n/2})}+x_{(${n/2+1})}}{2}=\frac{${F(xs[n/2-1])}+${F(xs[n/2])}}{2}=${F(md)}`,
+     n%2?L`n=${n}\text{ neparan}\Rightarrow\tilde x=x_{(${(n+1)/2})}=${F(md)}`:L`n=${n}\text{ paran}\Rightarrow\tilde x=\frac{x_{(${n/2})}+x_{(${n/2+1})}}{2}=\frac{${F(xs[n/2-1])}+${FP(xs[n/2])}}{2}=${F(md)}`,
      mf===1?L`\text{Mod: ne postoji (svaka se vrijednost pojavljuje samo jednom)}`:L`\text{Mod}=${v.a('modes').map(F).join(',\ ')}\ \ (\text{pojavljuje se }${mf}\text{ puta})`],
     result:L`\bar x=${F(v.x('mean'))},\quad \tilde x=${F(md)},\quad \text{mod}=${mf===1?'\\text{ne postoji}':v.a('modes').map(F).join(',\\ ')}`};}};}},
  {id:'spread',lbl:'Mjere raspršenosti (raspon, varijanca, st. devijacija, cv)',fields:[vecIn('podaci',undefined,'1, 2, 5, 8, 10, 10, 12, 15, 18, 19','Varijanca s² mjeri prosječno kvadratno odstupanje od sredine, a standardna devijacija s je njezin korijen. Koeficijent varijacije (cv = s / x̄) mjeri relativnu raspršenost.')],
@@ -269,28 +272,28 @@ const CATS=[
    tex(v){const n=v.x('n'),xb=v.x('xb'),ss=v.x('ss'),s2=v.x('s2'),s=v.x('s'),mn=v.x('mn'),mx=v.x('mx');
     return{analiza:[L`Zadano je \(n=${n}\) podataka (uzorak).`],
     formula:[L`R=x_{\max}-x_{\min},\quad s^2=\frac{1}{n-1}\sum_{i=1}^n(x_i-\bar x)^2,\quad s=\sqrt{s^2},\quad c_v=\frac{s}{\bar x}`],
-    steps:[L`\bar x=${F(xb)}`,L`\sum(x_i-\bar x)^2=${lst(X.map(z=>L`(${F(z)}-${F(xb)})^2`),4)}=${F(ss)}`,L`s^2=\frac{${F(ss)}}{${n}-1}=${F(s2)}`,L`s=\sqrt{${F(s2)}}=${F(s)}`,L`R=${F(mx)}-${F(mn)}=${F(mx-mn)}`,xb!==0?L`c_v=\frac{${F(s)}}{${F(xb)}}=${F(v.x('cv'))}`:L`c_v\text{ nije definiran (}\bar x=0)`],
+    steps:[L`\bar x=${F(xb)}`,L`\sum(x_i-\bar x)^2=${lst(X.map(z=>L`(${F(z)}-${FP(xb)})^2`),4)}=${F(ss)}`,L`s^2=\frac{${F(ss)}}{${n}-1}=${F(s2)}`,L`s=\sqrt{${F(s2)}}=${F(s)}`,L`R=${F(mx)}-${FP(mn)}=${F(mx-mn)}`,xb!==0?L`c_v=\frac{${F(s)}}{${F(xb)}}=${F(v.x('cv'))}`:L`c_v\text{ nije definiran (}\bar x=0)`],
     result:L`R=${F(mx-mn)},\quad s^2=${F(s2)},\quad s=${F(s)},\quad c_v=${xb!==0?F(v.x('cv')):'\\text{NA}'}`};}};}},
  {id:'quart',lbl:'Percentili, kvartili i IQR',fields:[vecIn('podaci',undefined,'1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20','100p-percentil je vrijednost za koju je barem 100p% podataka manje ili jednako njoj. Kvartili (Q1, Q2, Q3) dijele podatke na 4 jednaka dijela. Interkvartilni raspon IQR = Q3 - Q1.'),N('p','p (percentil 100p%, 0<p<1)',0.9)],
   run(g){const X=g.vec('podaci',{min:2}),p=g.num('p',{gt:0,max:0.999999});
    return{code:`x <- sort(${rv(X)})\nn <- length(x)\np <- ${p}\ncat("Sortirano:", x, "\\n")\ncat("Definicija iz skripte (quantile, type = 2):\\n")\nQ <- quantile(x, c(0.25, 0.5, 0.75, p), type = 2)\nprint(Q)\ncat("summary() (R koristi interpolaciju type = 7):\\n")\nprint(summary(x))\niq <- Q[3] - Q[1]\ncat("IQR =", iq, "\\n")`,
    hidden:`lf <- Q[1] - 1.5 * iq; uf <- Q[3] + 1.5 * iq\nH("n", n); H("xs", x); H("q1", Q[1]); H("q2", Q[2]); H("q3", Q[3]); H("qp", Q[4]); H("iq", iq); H("lf", lf); H("uf", uf); H("out", x[x < lf | x > uf])`,
    tex(v){const n=v.x('n'),xs=v.a('xs');
-    const ex=(pp,val)=>{const np=n*pp,ok=Math.abs(np-Math.round(np))<1e-9;return ok?L`p=${F(pp)}:\ np=${n}\cdot${F(pp)}=${Math.round(np)}\ (\text{cijeli})\Rightarrow\frac{x_{(${Math.round(np)})}+x_{(${Math.round(np)+1})}}{2}=\frac{${F(xs[Math.round(np)-1])}+${F(xs[Math.round(np)])}}{2}=${F(val)}`:L`p=${F(pp)}:\ np=${n}\cdot${F(pp)}=${F(np)}\Rightarrow x_{(${Math.ceil(np)})}=${F(val)}`;};
+    const ex=(pp,val)=>{const np=n*pp,ok=Math.abs(np-Math.round(np))<1e-9;return ok?L`p=${F(pp)}:\ np=${n}\cdot${F(pp)}=${Math.round(np)}\ (\text{cijeli})\Rightarrow\frac{x_{(${Math.round(np)})}+x_{(${Math.round(np)+1})}}{2}=\frac{${F(xs[Math.round(np)-1])}+${FP(xs[Math.round(np)])}}{2}=${F(val)}`:L`p=${F(pp)}:\ np=${n}\cdot${F(pp)}=${F(np)}\Rightarrow x_{(${Math.ceil(np-1e-9)})}=${F(val)}`;};
     const st=[ex(.25,v.x('q1')),ex(.5,v.x('q2')),ex(.75,v.x('q3'))];if(![.25,.5,.75].includes(p))st.push(ex(p,v.x('qp')));
-    st.push(L`IQR=Q_3-Q_1=${F(v.x('q3'))}-${F(v.x('q1'))}=${F(v.x('iq'))}`,L`\text{Granice za outliere: }[Q_1-1.5\,IQR,\ Q_3+1.5\,IQR]=[${F(v.x('lf'))},\ ${F(v.x('uf'))}]\quad\text{outlieri: }${v.a('out').length?v.a('out').map(F).join(',\\ '):'\\text{nema}'}`);
+    st.push(L`IQR=Q_3-Q_1=${F(v.x('q3'))}-${FP(v.x('q1'))}=${F(v.x('iq'))}`,L`\text{Granice za outliere: }[Q_1-1.5\,IQR,\ Q_3+1.5\,IQR]=[${F(v.x('lf'))},\ ${F(v.x('uf'))}]\quad\text{outlieri: }${v.a('out').length?v.a('out').map(F).join(',\\ '):'\\text{nema}'}`);
     return{analiza:[L`Zadano je \(n=${n}\) podataka; traži se \(${F(p*100)}\)-postotni percentil.`],
     formula:[L`\text{Podatak }x_{(k)}\text{ je }100p\text{-percentil ako je barem }np\text{ podataka}\le\text{ njega i barem }n(1-p)\ge\text{ njega; ako dva podatka zadovoljavaju uvjet, uzima se njihova sredina.}`,L`Q_1=P_{25},\ Q_2=\tilde x=P_{50},\ Q_3=P_{75},\ IQR=Q_3-Q_1`],
     steps:st,result:L`Q_1=${F(v.x('q1'))},\ Q_2=${F(v.x('q2'))},\ Q_3=${F(v.x('q3'))},\ IQR=${F(v.x('iq'))},\ P_{${F(p*100)}}=${F(v.x('qp'))}`};}};}},
  {id:'ecdf',lbl:'Empirijska funkcija distribucije Fn(x)',fields:[vecIn('podaci',undefined,'1, 2, 2, 3, 5, 7, 8, 9','Fn(x) predstavlja udio podataka u uzorku koji su manji ili jednaki x. To je stepenasta funkcija s skokovima veličine 1/n.')],
   run(g){const X=g.vec('podaci').sort((a,b)=>a-b);
    return{code:`x <- sort(${rv(X)})\nn <- length(x)\nFn <- ecdf(x)\nprint(Fn)\ncat("Moguće vrijednosti x i Fn(x):\\n")\nprint(data.frame(x = unique(x), Fn = Fn(unique(x))))`,
-   hidden:`H("n", length(X)); H("ux", unique(X)); H("fn", Fn(unique(X)))`,
+   hidden:`H("n", length(x)); H("ux", unique(x)); H("fn", Fn(unique(x)))`,
    tex(v){const n=v.x('n'),ux=v.a('ux'),fn=v.a('fn');
     return{analiza:[L`Empirijska funkcija distribucije za \(n=${n}\) podataka.`],
     formula:[L`F_n(x) = \frac{1}{n} \sum_{i=1}^n I(x_i \le x) = \frac{\text{broj podataka } \le x}{n}`],
     steps:ux.map((k,i)=>L`F_n(${F(k)}) = \frac{${Math.round(fn[i]*n)}}{${n}} = ${F(fn[i],4)}`),
-    result:L`F_n(x) \text{ je definiran stepenasto za sve } x \in \mathbb{R}`};}};}}]},
+    result:L`F_n(x)=0\ \text{za}\ x<${F(ux[0])},\qquad F_n(x)=1\ \text{za}\ x\ge ${F(ux[ux.length-1])}\ \text{(stepenasto između)}`};}};}}]},
 
 {id:'komb',lbl:'1.2 Kombinatorika i naivna vjerojatnost',probs:[
  {id:'perm',lbl:'Permutacije bez ponavljanja (n!)',fields:[N('n','n (broj različitih objekata)',8,'',undefined,'Permutacije određuju ukupan broj mogućih poredaka n različitih objekata. Formula: P_n = n!.')],
@@ -302,9 +305,9 @@ const CATS=[
   run(g){const w=g.raw('rijec').replace(/\s+/g,'');if(w.length<1||w.length>170)g.bad('rijec','unesite 1–170 znakova');
    return{code:`w <- ${rs(w)}\nsl <- strsplit(w, "")[[1]]\nf <- table(sl)\nprint(f)\nn <- length(sl)\nr <- factorial(n) / prod(factorial(f))\ncat("Broj različitih rasporeda =", format(r, big.mark = ".", scientific = FALSE), "\\n")`,
    hidden:`H("n", n); H("k", as.integer(f)); H("r", r)`,
-   tex(v){const n=v.x('n'),k=v.a('k'),r=v.x('r');return{analiza:[L`Riječ „${tx(w)}“ ima \(n=${n}\) slova, s ponavljanjima \(k_i=${k.join(',\\ ')}\).`],
+   tex(v){const n=v.x('n'),k=v.a('k'),r=v.x('r');return{analiza:[L`Riječ „${escH(w)}“ ima \(n=${n}\) slova, s ponavljanjima \(k_i=${k.join(',\\ ')}\).`],
    formula:[L`P=\frac{n!}{k_1!\,k_2!\cdots k_m!}=\frac{(k_1+\dots+k_m)!}{k_1!\cdots k_m!}`],
-   steps:[L`P=\frac{${n}!} {${k.map(z=>z+'!').join('\\,')}}=${F(r)}`],result:L`P=${F(r)}`};}};}},
+   steps:[L`P=\frac{${n}!}{${k.map(z=>z+'!').join('\\,')}}=${F(r)}`],result:L`P=${F(r)}`};}};}},
  {id:'var',lbl:'Varijacije (k od n, bitan poredak)',fields:[N('n','n',10),N('k','k',4),S('rep','Ponavljanje',[['bez','bez ponavljanja (n)ₖ'],['s','s ponavljanjem nᵏ']],'bez',undefined,'Odabir k elemenata iz skupa od n elemenata gdje je POREDAK VAŽAN.')],
   run(g){const n=g.num('n',{int:true,min:1,max:170}),k=g.num('k',{int:true,min:1,max:170}),s=g.sel('rep')==='s';if(!s&&k>n)g.bad('k','za varijacije bez ponavljanja mora biti k ≤ n');
    return{code:`n <- ${n}; k <- ${k}\nr <- ${s?'n^k':'prod(n:(n - k + 1))'}\ncat("Broj varijacija =", format(r, big.mark = ".", scientific = FALSE), "\\n")`,hidden:`H("r", r)`,
@@ -312,7 +315,7 @@ const CATS=[
    formula:[s?L`V'_n^k=n^k`:L`(n)_k=n(n-1)\cdots(n-k+1)=\frac{n!}{(n-k)!}`],
    steps:[s?L`${n}^{${k}}=${F(r)}`:L`(${n})_{${k}}=${lst(Array.from({length:k},(_,i)=>String(n-i)),6,'\\cdot ')}=${F(r)}`],result:L`${F(r)}`};}};}},
  {id:'comb',lbl:'Kombinacije (k od n, poredak NIJE bitan)',fields:[N('n','n',39),N('k','k',7),S('rep','Ponavljanje',[['bez','bez ponavljanja C(n,k)'],['s','s ponavljanjem C(n+k−1,k)']],'bez',undefined,'Odabir k elemenata od n gdje POREDAK NIJE BITAN. Bez ponavljanja: n! / (k!(n-k)!). S ponavljanjem: model kuglica i kutija.')],
-  run(g){const n=g.num('n',{int:true,min:1}),k=g.num('k',{int:true,min:0}),s=g.sel('rep')==='s';if(!s&&k>n)g.bad('k','za kombinacije bez ponavljanja mora biti k ≤ n');
+  run(g){const n=g.num('n',{int:true,min:1,max:100000}),k=g.num('k',{int:true,min:0,max:100000}),s=g.sel('rep')==='s';if(!s&&k>n)g.bad('k','za kombinacije bez ponavljanja mora biti k ≤ n');
    return{code:`n <- ${n}; k <- ${k}\nr <- ${s?'choose(n + k - 1, k)':'choose(n, k)'}\ncat("Broj kombinacija =", format(r, big.mark = ".", scientific = FALSE), "\\n")`,hidden:`H("r", r)`,
    tex(v){const r=v.x('r'),N2=s?n+k-1:n,kk=Math.min(k,N2-k);return{analiza:[L`Odabir \(k=${k}\) od \(n=${n}\) objekata, poredak nije važan, ${s?'s':'bez'} ponavljanja${s?' (razmještaj k jednakih kuglica u n kutija)':''}.`],
    formula:[s?L`\left(\!\binom{n}{k}\!\right)=\binom{n+k-1}{k}`:L`\binom nk=\frac{n!}{k!\,(n-k)!}`],
@@ -323,21 +326,23 @@ const CATS=[
    tex(v){const p=v.x('p');return{analiza:[L`Svi su elementarni ishodi jednako vjerojatni (uniformna vjerojatnost na \(\Omega\)).`],formula:[L`P(E)=\frac{|E|}{|\Omega|},\qquad P(E^c)=1-P(E)`],
    steps:[L`P(E)=\frac{${F(fav)}}{${F(tot)}}=${F(p)}`,L`P(E^c)=1-${F(p)}=${F(1-p)}`],result:L`P(E)=${F(p)}\ (${F(p*100,4)}\%)`};}};}},
  {id:'bday',lbl:'Problem rođendana',fields:[N('n','Broj osoba n',23),N('d','Broj dana u godini',365,undefined,undefined,'Vjerojatnost da barem dvije osobe u grupi od n ljudi imaju rođendan na isti dan. Računa se preko suprotnog događaja (svi imaju različite rođendane).')],
-  run(g){const n=g.num('n',{int:true,min:1}),d=g.num('d',{int:true,min:2});
-   return{code:`n <- ${n}; d <- ${d}\npraz <- if (n > d) 0 else prod((d - n + 1):d) / d^n\ncat("P(svi različiti) =", praz, "\\n")\ncat("P(barem dvoje isti dan) =", 1 - praz, "\\n")${d===365?'\ncat("pbirthday(n) =", pbirthday(n), "\\n")':''}`,hidden:`H("praz", praz)`,
+  run(g){const n=g.num('n',{int:true,min:1,max:100000}),d=g.num('d',{int:true,min:2,max:100000});
+   return{code:`n <- ${n}; d <- ${d}\npraz <- if (n > d) 0 else exp(sum(log((d - n + 1):d)) - n * log(d))\ncat("P(svi različiti) =", praz, "\\n")\ncat("P(barem dvoje isti dan) =", 1 - praz, "\\n")${d===365?'\ncat("pbirthday(n) =", pbirthday(n), "\\n")':''}`,hidden:`H("praz", praz)`,
    tex(v){const q=v.x('praz');return{analiza:[L`\(n=${n}\) osoba, \(${d}\) dana; pretpostavka: rođendani su jednako vjerojatni i nezavisni.`],formula:[L`P(\text{svi različiti})=\frac{(d)_n}{d^n}=\frac{d(d-1)\cdots(d-n+1)}{d^n},\qquad P(\text{barem dvoje})=1-P(\text{svi različiti})`],
-   steps:[n>d?L`n>d\Rightarrow P(\text{svi različiti})=0`:L`P(\text{svi različiti})=\frac{${lst(Array.from({length:n},(_,i)=>String(d-i)),5,'\\cdot ')}}{${d}^{${n}}}=${F(q)}`,L`P(\text{barem dvoje})=1-${F(q)}=${F(1-q)}`],result:L`P=${F(1-q)}`};}};}}]},
+   steps:[n>d?L`n>d\Rightarrow P(\text{svi različiti})=0`:L`P(\text{svi različiti})=\frac{${lst(Array.from({length:Math.min(n,6)},(_,i)=>String(d-i)),5,'\\cdot ')}${n>5?'\\cdots '+(d-n+1):''}}{${d}^{${n}}}=${F(q)}`,L`P(\text{barem dvoje})=1-${F(q)}=${F(1-q)}`],result:L`P=${F(1-q)}`};}};}}]},
 
 {id:'bayes',lbl:'1.3 Uvjetna vjerojatnost i Bayesova formula',probs:[
  {id:'cond',lbl:'Uvjetna vjerojatnost P(A | C)',fields:[N('pac','P(A ∩ C)',0.2),N('pc','P(C)',0.5),N('pa','P(A) (neobavezno — provjera nezavisnosti)','', '',undefined,'Uvjetna vjerojatnost P(A|C) = P(A ∩ C) / P(C) mjeri vjerojatnost događaja A ako znamo da se C sigurno dogodio.')],
   run(g){const pc=g.num('pc',{gt:0,max:1}),pac=g.num('pac',{min:0,max:pc}),pa=g.numOpt('pa',{min:0,max:1});
+   if(pa!==null&&pac>pa+1e-12)g.bad('pac','P(A∩C) ne može biti veći od P(A)');
    return{code:`pac <- ${pac}; pc <- ${pc}\npagc <- pac / pc\ncat("P(A | C) =", pagc, "\\n")${pa!==null?`\npa <- ${pa}\ncat("P(A) * P(C) =", pa * pc, " ; P(A ∩ C) =", pac, "\\n")\ncat("Nezavisni:", isTRUE(all.equal(pa * pc, pac)), "\\n")${pa>0?'\ncat("P(C | A) =", pac / pa, "\\n")':''}`:''}`,hidden:`H("r", pagc)`,
    tex(v){const r=v.x('r'),st=[L`P(A\mid C)=\frac{${F(pac)}}{${F(pc)}}=${F(r)}`];
     if(pa!==null){st.push(L`P(A)P(C)=${F(pa)}\cdot${F(pc)}=${F(pa*pc)}\ ${Math.abs(pa*pc-pac)<1e-9?'=':'\\ne'}\ P(A\cap C)=${F(pac)}\Rightarrow\ \text{${Math.abs(pa*pc-pac)<1e-9?'A i C su nezavisni':'A i C nisu nezavisni'}}`);if(pa>0)st.push(L`P(C\mid A)=\frac{${F(pac)}}{${F(pa)}}=${F(pac/pa)}`);}
     return{analiza:[L`Zadano: \(P(A\cap C)=${F(pac)}\), \(P(C)=${F(pc)}\)${pa!==null?L`, \(P(A)=${F(pa)}\)`:''}.`],formula:[L`P(A\mid C)=\frac{P(A\cap C)}{P(C)},\quad P(C)>0`],steps:st,result:L`P(A\mid C)=${F(r)}`};}};}},
  {id:'tp',lbl:'Formula potpune vjerojatnosti i Bayesov teorem',fields:[T('prior','Vjerojatnosti hipoteza P(Hᵢ) (zbroj = 1)','0.2, 0.8','potpun sustav događaja',undefined,'Formula potpune vjerojatnosti računa ukupnu vjerojatnost P(A) preko potpunog sustava hipoteza H_i. Bayesov teorem računa aposteriorne vjerojatnosti P(H_i|A).'),T('lik','Uvjetne vjerojatnosti P(A | Hᵢ)','0.3, 0.1')],
-  run(g){const pr=g.vec('prior',{min:2,min2:0}),li=g.vec('lik',{min:2});if(pr.length!==li.length)g.bad('lik','mora imati isti broj vrijednosti kao P(Hᵢ)');
+  run(g){const pr=g.vec('prior',{min:2}),li=g.vec('lik',{min:2});if(pr.length!==li.length)g.bad('lik','mora imati isti broj vrijednosti kao P(Hᵢ)');
    if([...pr,...li].some(z=>z<0||z>1))g.bad('prior','sve vjerojatnosti moraju biti u [0,1]');if(Math.abs(sum(pr)-1)>1e-9)g.bad('prior',`zbroj je ${+sum(pr).toFixed(9)}, a mora biti 1`);
+   if(sum(pr.map((p,i)=>p*li[i]))===0)g.bad('lik','P(A)=0, Bayesova formula nije definirana');
    return{code:`prior <- ${rv(pr)}\nlik <- ${rv(li)}\njoint <- prior * lik          # P(Hi) P(A|Hi)\nPA <- sum(joint)             # formula potpune vjerojatnosti\npost <- joint / PA           # Bayesova formula\nprint(data.frame(H = paste0("H", seq_along(prior)), prior, lik, joint = round(joint, 6), post = round(post, 6)))\ncat("P(A) =", PA, "\\n")`,
    hidden:`H("PA", PA); H("post", post)`,
    tex(v){const PA=v.x('PA'),po=v.a('post');return{analiza:[L`Potpun sustav događaja \(H_1,\dots,H_${pr.length}\) s \(P(H_i)=${pr.map(F).join(',\\ ')}\); \(P(A\mid H_i)=${li.map(F).join(',\\ ')}\).`],
@@ -346,6 +351,7 @@ const CATS=[
    result:L`P(A)=${F(PA)},\quad ${po.map((z,i)=>L`P(H_{${i+1}}\mid A)=${F(z)}`).join(',\\ ')}`};}};}},
  {id:'diag',lbl:'Dijagnostički test (rijetka bolest)',fields:[N('prev','Prevalencija P(D)',0.01),N('sens','Osjetljivost P(T⁺ | D)',0.95),N('spec','Specifičnost P(T⁻ | Dᶜ)',0.95,undefined,undefined,'Osjetljivost = vjerojatnost da je test pozitivan ako je osoba bolesna. Specifičnost = vjerojatnost da je test negativan ako je osoba zdrava.')],
   run(g){const pv=g.num('prev',{min:0,max:1}),se=g.num('sens',{min:0,max:1}),sp=g.num('spec',{min:0,max:1});
+   const PT0=se*pv+(1-sp)*(1-pv);if(PT0<=0||PT0>=1)g.bad('prev','P(T⁺) mora biti u (0,1) za izračun prediktivnih vrijednosti');
    return{code:`prev <- ${pv}; sens <- ${se}; spec <- ${sp}\nPT <- sens * prev + (1 - spec) * (1 - prev)      # P(T+)\nppv <- sens * prev / PT                           # P(D | T+)\nnpv <- spec * (1 - prev) / (1 - PT)               # P(Dc | T-)\ncat("P(T+) =", PT, "\\n")\ncat("P(D | T+) =", ppv, "\\n")\ncat("P(Dc | T-) =", npv, "\\n")`,hidden:`H("PT", PT); H("ppv", ppv); H("npv", npv)`,
    tex(v){const PT=v.x('PT'),pp=v.x('ppv'),np=v.x('npv');return{analiza:[L`\(P(D)=${F(pv)}\), osjetljivost \(P(T^+\mid D)=${F(se)}\), specifičnost \(P(T^-\mid D^c)=${F(sp)}\).`],
    formula:[L`P(T^+)=P(T^+\mid D)P(D)+P(T^+\mid D^c)P(D^c),\qquad P(D\mid T^+)=\frac{P(T^+\mid D)P(D)}{P(T^+)}`],
@@ -360,7 +366,7 @@ const CATS=[
    return{code:`x <- ${rv(x)}\np <- ${rv(p)}\na <- ${a}; b <- ${b}\nEX <- sum(x * p)\nEX2 <- sum(x^2 * p)\nVX <- EX2 - EX^2\ncat("E(X) =", EX, "\\n"); cat("E(X^2) =", EX2, "\\n")\ncat("Var(X) =", VX, " SD(X) =", sqrt(VX), "\\n")\ncat("E(aX+b) =", a * EX + b, "  Var(aX+b) =", a^2 * VX, "\\n")`,hidden:`H("EX", EX); H("EX2", EX2); H("VX", VX)`,
    tex(v){const EX=v.x('EX'),E2=v.x('EX2'),VX=v.x('VX');return{analiza:[L`Diskretna slučajna varijabla s \(${x.length}\) vrijednosti; \(Y=${F(a)}X+(${F(b)})\).`],
    formula:[L`E(X)=\sum a_ip_i,\quad \mathrm{Var}(X)=E(X^2)-(EX)^2,\quad E(aX+b)=aEX+b,\quad \mathrm{Var}(aX+b)=a^2\mathrm{Var}(X)`],
-   steps:[L`E(X)=${lst(x.map((z,i)=>L`${F(z)}\cdot${F(p[i])}`),6)}=${F(EX)}`,L`E(X^2)=${lst(x.map((z,i)=>L`${F(z)}^2\cdot${F(p[i])}`),6)}=${F(E2)}`,L`\mathrm{Var}(X)=${F(E2)}-(${F(EX)})^2=${F(VX)},\quad \sigma=\sqrt{${F(VX)}}=${F(Math.sqrt(VX))}`,L`E(Y)=${F(a)}\cdot${F(EX)}+(${F(b)})=${F(a*EX+b)},\quad \mathrm{Var}(Y)=${F(a)}^2\cdot${F(VX)}=${F(a*a*VX)}`],result:L`E(X)=${F(EX)},\quad \mathrm{Var}(X)=${F(VX)}`};}};}},
+   steps:[L`E(X)=${lst(x.map((z,i)=>L`${FP(z)}\cdot${F(p[i])}`),6)}=${F(EX)}`,L`E(X^2)=${lst(x.map((z,i)=>L`${FP(z)}^2\cdot${F(p[i])}`),6)}=${F(E2)}`,L`\mathrm{Var}(X)=${F(E2)}-${FP(EX)}^2=${F(VX)},\quad \sigma=\sqrt{${F(VX)}}=${F(Math.sqrt(VX))}`,L`E(Y)=${FP(a)}\cdot${FP(EX)}+(${F(b)})=${F(a*EX+b)},\quad \mathrm{Var}(Y)=${FP(a)}^2\cdot${F(VX)}=${F(a*a*VX)}`],result:L`E(X)=${F(EX)},\quad \mathrm{Var}(X)=${F(VX)}`};}};}},
  {id:'joint',lbl:'Zajednička razdioba: kovarijanca i korelacija',fields:[T('x','Vrijednosti X (stupci)','0, 1, 2'),T('y','Vrijednosti Y (retci)','-1, 1'),A('m','Tablica P(X = xⱼ, Y = yᵢ): jedan redak po Y, retci u novom redu ili ;','1/6 1/6 1/6\n0 1/2 0','razlomci poput 1/6 su dozvoljeni',undefined,'Kovarijanca Cov(X,Y) = E(XY) - E(X)E(Y) mjeri smjer linearne povezanosti. Ako su X i Y nezavisne, Cov(X,Y) = 0.')],
   run(g){const x=g.vec('x',{min:1}),y=g.vec('y',{min:1});const rows=g.raw('m').split(/\n|;/).map(r=>r.trim()).filter(Boolean).map(r=>r.split(/[\s,]+/).filter(Boolean).map(t=>{const [a,b]=t.split('/');const v=b!==undefined?Number(a)/Number(b):Number(a);if(!isFinite(v))g.bad('m',`„${t}“ nije broj`);return v;}));
    if(rows.length!==y.length||rows.some(r=>r.length!==x.length))g.bad('m',`tablica mora imati ${y.length} redaka i ${x.length} stupaca`);const all=rows.flat();if(all.some(z=>z<0))g.bad('m','vjerojatnosti ne smiju biti negativne');if(Math.abs(sum(all)-1)>1e-9)g.bad('m',`zbroj je ${+sum(all).toFixed(9)}, a mora biti 1`);
@@ -368,7 +374,7 @@ const CATS=[
    hidden:`H("px", px); H("py", py); H("EX", EX); H("EY", EY); H("EXY", EXY); H("cov", cov); H("VX", VX); H("VY", VY); H("cor", cor); H("nez", nez)`,
    tex(v){const px=v.a('px'),py=v.a('py'),EX=v.x('EX'),EY=v.x('EY'),EXY=v.x('EXY'),cv=v.x('cov'),r=v.x('cor');return{analiza:[L`Zajednička razdioba \(P(X=x_j,Y=y_i)\); marginale: \(P(X)=${px.map(z=>F(z,4)).join(',\\ ')}\), \(P(Y)=${py.map(z=>F(z,4)).join(',\\ ')}\).`],
    formula:[L`\mathrm{Cov}(X,Y)=E(XY)-E(X)E(Y),\qquad \mathrm{Corr}(X,Y)=\frac{\mathrm{Cov}(X,Y)}{\sqrt{\mathrm{Var}(X)\mathrm{Var}(Y)}}`],
-   steps:[L`E(X)=${F(EX)},\quad E(Y)=${F(EY)}`,L`E(XY)=\sum_{i,j}x_jy_iP(X=x_j,Y=y_i)=${F(EXY)}`,L`\mathrm{Cov}(X,Y)=${F(EXY)}-${F(EX)}\cdot${F(EY)}=${F(cv)}`,L`\mathrm{Var}(X)=${F(v.x('VX'))},\ \mathrm{Var}(Y)=${F(v.x('VY'))}\Rightarrow\mathrm{Corr}(X,Y)=${Number.isNaN(r)?'\\text{nije definirana}':F(r)}`,
+   steps:[L`E(X)=${F(EX)},\quad E(Y)=${F(EY)}`,L`E(XY)=\sum_{i,j}x_jy_iP(X=x_j,Y=y_i)=${F(EXY)}`,L`\mathrm{Cov}(X,Y)=${F(EXY)}-${FP(EX)}\cdot${FP(EY)}=${F(cv)}`,L`\mathrm{Var}(X)=${F(v.x('VX'))},\ \mathrm{Var}(Y)=${F(v.x('VY'))}\Rightarrow\mathrm{Corr}(X,Y)=${Number.isNaN(r)?'\\text{nije definirana}':F(r)}`,
    L`\text{${v.s('nez')[0]==='TRUE'?'Zajednička razdioba = umnožak marginala ⇒ X i Y su nezavisne.':'Zajednička razdioba ≠ umnožak marginala ⇒ X i Y su zavisne'+(Math.abs(cv)<1e-12?' (iako su nekorelirane).':'.')}}`],result:L`\mathrm{Cov}=${F(cv)},\quad \mathrm{Corr}=${Number.isNaN(r)?'\\text{NA}':F(r)}`};}};}},
  {id:'cgt',lbl:'Centralni granični teorem (prosjek / zbroj)',fields:[S('kind','Veličina',[['mean','prosjek X̄ₙ'],['sum','zbroj Sₙ = X₁+…+Xₙ']],'sum',undefined,'Za velika n (n ≥ 30), zbroj S_n i prosjek X̄_n težak normalnoj razdiobi bez obzira na razdiobu pojedinih elemenata X_i.'),N('mu','μ (očekivanje jedne varijable)',312),N('s2','σ² (varijanca jedne varijable)',550),N('n','n (broj varijabli)',16000),S('typ','Vjerojatnost',[['gt','P(> a)'],['le','P(≤ a)'],['between','P(a ≤ . ≤ b)']],'gt'),N('a','a',5000000),N('b','b',5100000,'',v=>v.typ==='between')],
   run(g){const k=g.sel('kind'),mu=g.num('mu'),s2=g.num('s2',{gt:0}),n=g.num('n',{int:true,min:1}),typ=g.sel('typ'),a=g.num('a'),b=typ==='between'?g.num('b'):0;if(typ==='between'&&b<a)g.bad('b','b mora biti ≥ a');
@@ -376,11 +382,11 @@ const CATS=[
    return{code:`mu <- ${mu}; s2 <- ${s2}; n <- ${n}\nm <- ${sm?'mu':'n * mu'}                 # očekivanje ${sm?'prosjeka':'zbroja'}\nsdv <- ${sm?'sqrt(s2 / n)':'sqrt(n * s2)'}     # standardna devijacija ${sm?'prosjeka':'zbroja'}\na <- ${a}; b <- ${b}\nza <- (a - m) / sdv; zb <- (b - m) / sdv\nq <- switch("${typ}", gt = 1 - pnorm(za), le = pnorm(za), between = pnorm(zb) - pnorm(za))\ncat("m =", m, " sd =", sdv, "\\n")\ncat("z_a =", za, " z_b =", zb, "\\n")\ncat("Tražena vjerojatnost ≈", q, "\\n")`,hidden:`H("m", m); H("sd", sdv); H("za", za); H("zb", zb); H("q", q)`,
    tex(v){const m=v.x('m'),sd=v.x('sd'),za=v.x('za'),zb=v.x('zb'),q=v.x('q'),nm=sm?'\\bar X_n':'S_n';return{analiza:[L`\(X_i\) nezavisne, jednako distribuirane, \(\mu=${F(mu)}\), \(\sigma^2=${F(s2)}\), \(n=${F(n)}\).`],
    formula:[L`Z_n=\frac{\bar X_n-\mu}{\sigma/\sqrt n}\ \xrightarrow{d}\ N(0,1);\qquad \bar X_n\approx N\!\left(\mu,\tfrac{\sigma^2}{n}\right),\quad S_n\approx N(n\mu,\,n\sigma^2)`],
-   steps:[sm?L`E(\bar X_n)=\mu=${F(m)},\quad SD(\bar X_n)=\sqrt{\tfrac{${F(s2)}}{${F(n)}}}=${F(sd)}`:L`E(S_n)=n\mu=${F(n)}\cdot${F(mu)}=${F(m)},\quad SD(S_n)=\sqrt{n\sigma^2}=\sqrt{${F(n)}\cdot${F(s2)}}=${F(sd)}`,
-    L`z_a=\frac{${F(a)}-${F(m)}}{${F(sd)}}=${F(za)}${typ==='between'?L`,\quad z_b=\frac{${F(b)}-${F(m)}}{${F(sd)}}=${F(zb)}`:''}`,
+   steps:[sm?L`E(\bar X_n)=\mu=${F(m)},\quad SD(\bar X_n)=\sqrt{\tfrac{${F(s2)}}{${F(n)}}}=${F(sd)}`:L`E(S_n)=n\mu=${F(n)}\cdot${FP(mu)}=${F(m)},\quad SD(S_n)=\sqrt{n\sigma^2}=\sqrt{${F(n)}\cdot${F(s2)}}=${F(sd)}`,
+    L`z_a=\frac{${F(a)}-${FP(m)}}{${F(sd)}}=${F(za)}${typ==='between'?L`,\quad z_b=\frac{${F(b)}-${FP(m)}}{${F(sd)}}=${F(zb)}`:''}`,
     typ==='gt'?L`P(${nm}>${F(a)})\approx1-\Phi(${F(za)})=${F(q)}`:typ==='le'?L`P(${nm}\le${F(a)})\approx\Phi(${F(za)})=${F(q)}`:L`P(${F(a)}\le ${nm}\le ${F(b)})\approx\Phi(${F(zb)})-\Phi(${F(za)})=${F(q)}`],result:L`P\approx${F(q)}`};}};}},
  {id:'cgtb',lbl:'Moivre–Laplaceov CGT: normalna aproksimacija binomne',fields:[N('n','n',1000),N('p','p',0.5),N('k1','k₁ (donja granica)',490),N('k2','k₂ (gornja granica)',1000,undefined,undefined,'Aproksimacija binomne B(n,p) normalnom N(np, np(1-p)). Korekcija po neprekidnosti koristi granice k1 - 0.5 i k2 + 0.5.')],
-  run(g){const n=g.num('n',{int:true,min:1}),p=g.num('p',{gt:0,max:0.999999}),k1=g.num('k1',{int:true,min:0}),k2=g.num('k2',{int:true,min:k1,max:n});
+  run(g){const n=g.num('n',{int:true,min:1}),p=g.num('p',{gt:0,max:0.999999}),k1=g.num('k1',{int:true,min:0,max:n}),k2=g.num('k2',{int:true,min:k1,max:n});
    return{code:`n <- ${n}; p <- ${p}; k1 <- ${k1}; k2 <- ${k2}\nm <- n * p; sdv <- sqrt(n * p * (1 - p))\ntocno <- pbinom(k2, n, p) - pbinom(k1 - 1, n, p)\nz1 <- (k1 - 0.5 - m) / sdv; z2 <- (k2 + 0.5 - m) / sdv\nkor <- pnorm(z2) - pnorm(z1)                                    # s korekcijom po neprekidnosti\nbez <- pnorm((k2 - m) / sdv) - pnorm((k1 - m) / sdv)            # bez korekcije\ncat("m =", m, " sd =", sdv, "\\n")\ncat("Točno (binomna) =", tocno, "\\n")\ncat("Aproksimacija s korekcijom =", kor, "\\n")\ncat("Aproksimacija bez korekcije =", bez, "\\n")`,
    hidden:`H("m", m); H("sd", sdv); H("tocno", tocno); H("kor", kor); H("bez", bez); H("z1", z1); H("z2", z2)`,
    tex(v){const m=v.x('m'),sd=v.x('sd');return{analiza:[L`\(X\sim B(${n},${F(p)})\); traži se \(P(${k1}\le X\le ${k2})\).`],formula:[L`E(X)=np,\ \mathrm{Var}(X)=np(1-p);\quad P(k_1\le X\le k_2)\approx\Phi\!\left(\frac{k_2+\frac12-np}{\sqrt{np(1-p)}}\right)-\Phi\!\left(\frac{k_1-\frac12-np}{\sqrt{np(1-p)}}\right)`],
@@ -392,7 +398,7 @@ const CATS=[
    return{analiza:[L`\(E(X)=${F(mu)}\), \(\mathrm{Var}(X)=${F(s2)}\), \(a=${F(a)}\).`],formula:[L`\text{Čebišev: }P(|X-EX|\ge a)\le\frac{\mathrm{Var}(X)}{a^2},\qquad \text{Markov: }P(X\ge a)\le\frac{EX}{a}\ (X\ge0)`],steps:st,result:L`P(|X-\mu|\ge ${F(a)})\le${F(v.x('cheb'))}`};}};}}]},
 
 {id:'zakl',lbl:'1.6 Statističko zaključivanje i regresija',probs:[
- {id:'ttest',lbl:'t-test o očekivanju (σ nepoznata)',fields:[S('mode','Ulaz',[['podaci','sirovi podaci'],['sazetak','sažetak (n, x̄, s)']],'podaci'),vecIn('podaci',undefined,'1.108, 1.009, 1.042, 1.053, 0.969, 1.002, 0.9688, 1.019, 1.062, 1.032, 1.072, 0.977, 1.062, 1.044, 1.069, 1.029, 0.979, 1.096, 1.079, 0.999'),N('n','n',20,'',v=>v.mode==='sazetak'),N('xb','x̄',1.03354,'',v=>v.mode==='sazetak'),N('s','s',0.04229,'',v=>v.mode==='sazetak'),N('mu0','μ₀ (nul-hipoteza)',1),S('alt','Alternativa',ALT,'two.sided'),N('alpha','Razina značajnosti α',0.05,undefined,undefined,'Testiranje hipoteze H_0: μ = μ_0 kada populacijska varijanca σ nije poznata. Koristi t-razdiobu s n - 1 stupnjeva slobode.')],
+ {id:'ttest',lbl:'t-test o očekivanju (σ nepoznata)',fields:[S('mode','Ulaz',[['podaci','sirovi podaci'],['sazetak','sažetak (n, x̄, s)']],'podaci'),vecIn('podaci',undefined,'1.108, 1.009, 1.042, 1.053, 0.969, 1.002, 0.9688, 1.019, 1.062, 1.032, 1.072, 0.977, 1.062, 1.044, 1.069, 1.029, 0.979, 1.096, 1.079, 0.999',undefined,v=>v.mode==='podaci'),N('n','n',20,'',v=>v.mode==='sazetak'),N('xb','x̄',1.03354,'',v=>v.mode==='sazetak'),N('s','s',0.04229,'',v=>v.mode==='sazetak'),N('mu0','μ₀ (nul-hipoteza)',1),S('alt','Alternativa',ALT,'two.sided'),N('alpha','Razina značajnosti α',0.05,undefined,undefined,'Testiranje hipoteze H_0: μ = μ_0 kada populacijska varijanca σ nije poznata. Koristi t-razdiobu s n - 1 stupnjeva slobode.')],
   run(g){const dat=g.sel('mode')==='podaci',mu0=g.num('mu0'),alt=g.sel('alt'),al=g.num('alpha',{gt:0,max:0.5});let pre,n,xb,s;
    if(dat){const X=g.vec('podaci',{min:2});n=X.length;xb=sum(X)/n;s=Math.sqrt(sum(X.map(z=>(z-xb)**2))/(n-1));if(!(s>0))g.bad('podaci','svi su podaci jednaki (s = 0)');pre=`x <- ${rv(X)}\nn <- length(x); xbar <- mean(x); s <- sd(x)\nmu0 <- ${mu0}; alpha <- ${al}; alt <- "${alt}"\nprint(t.test(x, mu = mu0, alternative = alt, conf.level = 1 - alpha))`;}
    else{n=g.num('n',{int:true,min:2});xb=g.num('xb');s=g.num('s',{gt:0});pre=`n <- ${n}; xbar <- ${xb}; s <- ${s}\nmu0 <- ${mu0}; alpha <- ${al}; alt <- "${alt}"`;}
@@ -400,7 +406,7 @@ const CATS=[
    hidden:`H("n", n); H("xb", xbar); H("s", s); H("t", tst); H("df", df); H("p", p); H("crit", crit); H("lo", xbar - me); H("hi", xbar + me)`,
    tex(v){const t=v.x('t'),df=v.x('df'),p=v.x('p'),h=hyp(alt,mu0);return{analiza:[L`Jedan uzorak, \(\sigma\) nepoznata ⇒ t-test. \(n=${n},\ \bar x=${F(xb)},\ s=${F(s)},\ \mu_0=${F(mu0)},\ \alpha=${F(al)}\).`,L`Hipoteze: \(${h[0]},\ ${h[1]}\)`],
    formula:[L`T=\frac{\sqrt n\,(\bar X_n-\mu_0)}{S_n}\sim t(n-1)\ \text{ako vrijedi }H_0`],
-   steps:[L`t=\frac{\sqrt{${n}}\,(${F(xb)}-${F(mu0)})}{${F(s)}}=${F(t)},\qquad df=n-1=${df}`,critTex(alt,'t',df,al,v.x('crit')),decide(p,al),L`\text{95\% (1-}\alpha\text{) interval pouzdanosti za }\mu:\ \bar x\pm t_{${df};\,${F(al/2)}}\frac{s}{\sqrt n}=[${F(v.x('lo'))},\ ${F(v.x('hi'))}]`],
+   steps:[L`t=\frac{\sqrt{${n}}\,(${F(xb)}-${FP(mu0)})}{${F(s)}}=${F(t)},\qquad df=n-1=${df}`,critTex(alt,'t',df,al,v.x('crit')),decide(p,al),L`\text{${F((1-al)*100)}\% interval pouzdanosti za }\mu:\ \bar x\pm t_{${df};\,${F(al/2)}}\frac{s}{\sqrt n}=[${F(v.x('lo'))},\ ${F(v.x('hi'))}]`],
    result:L`t=${F(t)},\quad p=${F(p)}\ \Rightarrow\ ${p<al?'\\text{odbacujemo }H_0':'\\text{ne odbacujemo }H_0'}`};}};}},
  {id:'ztest',lbl:'Z-test o očekivanju (σ poznata)',fields:[S('mode','Ulaz',[['podaci','sirovi podaci'],['sazetak','sažetak (n, x̄)']],'sazetak'),vecIn('podaci',undefined,'7.6, 7.5, 7.8, 7.9, 7.4, 7.85, 7.65, 7.7, 7.9, 7.7',undefined,v=>v.mode==='podaci'),N('n','n',5,'',v=>v.mode==='sazetak'),N('xb','x̄',9.5,'',v=>v.mode==='sazetak'),N('sig','σ (st. devijacija populacije)',2),N('mu0','μ₀',8),S('alt','Alternativa',ALT,'two.sided'),N('alpha','Razina značajnosti α',0.05,undefined,undefined,'Testiranje hipoteze H_0: μ = μ_0 kada je populacijska standardna devijacija σ POZNATA. Koristi standardnu normalnu N(0,1) razdiobu.')],
   run(g){const dat=g.sel('mode')==='podaci',mu0=g.num('mu0'),sg=g.num('sig',{gt:0}),alt=g.sel('alt'),al=g.num('alpha',{gt:0,max:0.5});let pre,n,xb;
@@ -408,23 +414,23 @@ const CATS=[
    return{code:`${pre}\nsigma <- ${sg}; mu0 <- ${mu0}; alpha <- ${al}; alt <- "${alt}"\nz <- sqrt(n) * (xbar - mu0) / sigma\np <- switch(alt, two.sided = 2 * pnorm(-abs(z)), greater = pnorm(z, lower.tail = FALSE), less = pnorm(z))\ncrit <- switch(alt, two.sided = qnorm(1 - alpha / 2), greater = qnorm(1 - alpha), less = -qnorm(1 - alpha))\ncat("x̄ =", xbar, " z =", z, " p-vrijednost =", p, " kritična vrijednost =", crit, "\\n")`,
    hidden:`H("xb", xbar); H("z", z); H("p", p); H("crit", crit)`,
    tex(v){const z=v.x('z'),p=v.x('p'),xb2=v.x('xb'),h=hyp(alt,mu0);return{analiza:[L`Jedan uzorak iz normalne razdiobe, \(\sigma=${F(sg)}\) poznata ⇒ Z-test. \(n=${n},\ \bar x=${F(xb2)},\ \mu_0=${F(mu0)},\ \alpha=${F(al)}\).`,L`Hipoteze: \(${h[0]},\ ${h[1]}\)`],formula:[L`Z=\frac{\sqrt n\,(\bar X_n-\mu_0)}{\sigma}\sim N(0,1)\ \text{ako vrijedi }H_0`],
-   steps:[L`z=\frac{\sqrt{${n}}\,(${F(xb2)}-${F(mu0)})}{${F(sg)}}=${F(z)}`,critTex(alt,'z',0,al,v.x('crit')),decide(p,al)],result:L`z=${F(z)},\quad p=${F(p)}\ \Rightarrow\ ${p<al?'\\text{odbacujemo }H_0':'\\text{ne odbacujemo }H_0'}`};}};}},
+   steps:[L`z=\frac{\sqrt{${n}}\,(${F(xb2)}-${FP(mu0)})}{${F(sg)}}=${F(z)}`,critTex(alt,'z',0,al,v.x('crit')),decide(p,al)],result:L`z=${F(z)},\quad p=${F(p)}\ \Rightarrow\ ${p<al?'\\text{odbacujemo }H_0':'\\text{ne odbacujemo }H_0'}`};}};}},
  {id:'ttest2',lbl:'Dvouzorkovni (Welchov) t-test',fields:[vecIn('x','Uzorak 1','1.108, 1.009, 1.042, 1.053, 0.969, 1.002, 0.9688, 1.019, 1.062, 1.032'),vecIn('y','Uzorak 2','1.072, 0.977, 1.062, 1.044, 1.069, 1.029, 0.979, 1.096, 1.079, 0.999'),S('alt','Alternativa (μ₁ − μ₂)',ALT,'two.sided'),N('alpha','Razina značajnosti α',0.05,undefined,undefined,'Testira jednakost očekivanja dvaju nezavisnih uzoraka bez pretpostavke o jednakosti varijanci (Welchova korekcija).')],
   run(g){const x=g.vec('x',{min:2}),y=g.vec('y',{min:2}),alt=g.sel('alt'),al=g.num('alpha',{gt:0,max:0.5});
    return{code:`x <- ${rv(x)}\ny <- ${rv(y)}\nalpha <- ${al}\nres <- t.test(x, y, alternative = "${alt}", conf.level = 1 - alpha)\nprint(res)`,
    hidden:`H("n1", length(x)); H("n2", length(y)); H("m1", mean(x)); H("m2", mean(y)); H("s1", sd(x)); H("s2", sd(y)); H("t", res$statistic); H("df", res$parameter); H("p", res$p.value); H("ci", res$conf.int)`,
    tex(v){const t=v.x('t'),p=v.x('p'),h=hyp(alt,0,'\\mu_1-\\mu_2');return{analiza:[L`Dva nezavisna uzorka (\(n_1=${x.length},\ n_2=${y.length}\)), nepoznate (različite) varijance ⇒ Welchov t-test.`,L`Hipoteze: \(${h[0]},\ ${h[1]}\)`],formula:[L`T=\frac{\bar X_1-\bar X_2}{\sqrt{S_1^2/n_1+S_2^2/n_2}}\ \approx t(\nu)`],
-   steps:[L`\bar x_1=${F(v.x('m1'))},\ s_1=${F(v.x('s1'))};\quad \bar x_2=${F(v.x('m2'))},\ s_2=${F(v.x('s2'))}`,L`t=\frac{${F(v.x('m1'))}-${F(v.x('m2'))}}{\sqrt{\frac{${F(v.x('s1'))}^2}{${x.length}}+\frac{${F(v.x('s2'))}^2}{${y.length}}}}=${F(t)},\quad \nu\approx${F(v.x('df'))}`,decide(p,al)],result:L`t=${F(t)},\ p=${F(p)}\Rightarrow ${p<al?'\\text{odbacujemo }H_0':'\\text{ne odbacujemo }H_0'}`};}};}},
+   steps:[L`\bar x_1=${F(v.x('m1'))},\ s_1=${F(v.x('s1'))};\quad \bar x_2=${F(v.x('m2'))},\ s_2=${F(v.x('s2'))}`,L`t=\frac{${F(v.x('m1'))}-${FP(v.x('m2'))}}{\sqrt{\frac{${F(v.x('s1'))}^2}{${x.length}}+\frac{${F(v.x('s2'))}^2}{${y.length}}}}=${F(t)},\quad \nu\approx${F(v.x('df'))}`,decide(p,al)],result:L`t=${F(t)},\ p=${F(p)}\Rightarrow ${p<al?'\\text{odbacujemo }H_0':'\\text{ne odbacujemo }H_0'}`};}};}},
  {id:'reg',lbl:'Linearna regresija y = α + βx',fields:[T('x','x (nezavisna varijabla)','4, 8, 12, 16, 20'),T('y','y (zavisna varijabla)','40, 60, 75, 80, 90'),N('x0','x₀ za predviđanje (neobavezno)','12',undefined,undefined,'Procjena parametara pravca y = α + βx metodom najmanjih kvadrata. β je nagib pravca, a α odsječak na y-osi.')],
   run(g){const x=g.vec('x',{min:2}),y=g.vec('y',{min:2}),x0=g.numOpt('x0');if(x.length!==y.length)g.bad('y','x i y moraju imati isti broj vrijednosti');if(new Set(x).size<2)g.bad('x','x vrijednosti ne smiju biti sve jednake');
    return{code:`x <- ${rv(x)}\ny <- ${rv(y)}\nn <- length(x)\nfit <- lm(y ~ x)              # metoda najmanjih kvadrata\nprint(fit)\nSxx <- sum((x - mean(x))^2); Syy <- sum((y - mean(y))^2); Sxy <- sum((x - mean(x)) * (y - mean(y)))\nbeta <- Sxy / Sxx; alpha <- mean(y) - beta * mean(x)\nr <- cor(x, y)\ncat("Sxx =", Sxx, " Syy =", Syy, " Sxy =", Sxy, "\\n")\ncat("alpha =", alpha, " beta =", beta, "\\n")\ncat("r =", r, " R^2 =", r^2, "\\n")${x0!==null?`\nx0 <- ${x0}\ncat("Predviđena vrijednost y(x0) =", alpha + beta * x0, "\\n")`:''}`,
    hidden:`H("xb", mean(x)); H("yb", mean(y)); H("Sxx", Sxx); H("Syy", Syy); H("Sxy", Sxy); H("beta", beta); H("alpha", alpha); H("r", r)${x0!==null?'; H("pred", alpha + beta * x0)':''}`,
-   tex(v){const b=v.x('beta'),a=v.x('alpha'),r=v.x('r'),st=[L`\bar x=${F(v.x('xb'))},\quad \bar y=${F(v.x('yb'))}`,L`S_{xx}=\sum(x_i-\bar x)^2=${F(v.x('Sxx'))},\quad S_{xy}=\sum(x_i-\bar x)(y_i-\bar y)=${F(v.x('Sxy'))},\quad S_{yy}=${F(v.x('Syy'))}`,L`\hat\beta=\frac{${F(v.x('Sxy'))}}{${F(v.x('Sxx'))}}=${F(b)}`,L`\hat\alpha=${F(v.x('yb'))}-${F(b)}\cdot${F(v.x('xb'))}=${F(a)}`,L`r=\frac{${F(v.x('Sxy'))}}{\sqrt{${F(v.x('Sxx'))}\cdot${F(v.x('Syy'))}}}=${F(r)},\quad r^2=${F(r*r)}`];
-    if(x0!==null)st.push(L`\hat y(${F(x0)})=${F(a)}+${F(b)}\cdot${F(x0)}=${F(v.x('pred'))}`);
+   tex(v){const b=v.x('beta'),a=v.x('alpha'),r=v.x('r'),st=[L`\bar x=${F(v.x('xb'))},\quad \bar y=${F(v.x('yb'))}`,L`S_{xx}=\sum(x_i-\bar x)^2=${F(v.x('Sxx'))},\quad S_{xy}=\sum(x_i-\bar x)(y_i-\bar y)=${F(v.x('Sxy'))},\quad S_{yy}=${F(v.x('Syy'))}`,L`\hat\beta=\frac{${F(v.x('Sxy'))}}{${F(v.x('Sxx'))}}=${F(b)}`,L`\hat\alpha=${F(v.x('yb'))}-${FP(b)}\cdot${FP(v.x('xb'))}=${F(a)}`,L`r=\frac{${F(v.x('Sxy'))}}{\sqrt{${F(v.x('Sxx'))}\cdot${F(v.x('Syy'))}}}=${F(r)},\quad r^2=${F(r*r)}`];
+    if(x0!==null)st.push(L`\hat y(${F(x0)})=${F(a)}+${FP(b)}\cdot${F(x0)}=${F(v.x('pred'))}`);
     return{analiza:[L`Uparenih podataka: \(n=${x.length}\). Model: \(Y_i=\alpha+\beta x_i+\epsilon_i\) s \(E\epsilon_i=0\), jednakom varijancom i nekoreliranim pogreškama.`],formula:[L`\hat\beta=\frac{S_{xy}}{S_{xx}},\quad \hat\alpha=\bar y-\hat\beta\bar x,\quad r=\frac{S_{xy}}{\sqrt{S_{xx}S_{yy}}}`],steps:st,result:L`\hat y=${F(a)}${b<0?'':'+'}${F(b)}\,x,\qquad r=${F(r)}`};},
    chart:v=>chartScatter(x,y,v.x('alpha'),v.x('beta'))};}},
  {id:'pearson',lbl:'Pearsonov koeficijent korelacije i test ρ = 0',fields:[T('x','x','100, 110, 120, 130, 140, 150'),T('y','y','45, 52, 50, 60, 62, 68'),N('alpha','Razina značajnosti α',0.05,undefined,undefined,'Pearsonov r mjeri jačinu i smjer linearne povezanosti dviju kontinuiranih varijabli (-1 ≤ r ≤ 1). Testira se hipoteza H_0: ρ = 0.')],
-  run(g){const x=g.vec('x',{min:3}),y=g.vec('y',{min:3}),al=g.num('alpha',{gt:0,max:0.5});if(x.length!==y.length)g.bad('y','x i y moraju imati isti broj vrijednosti');if(new Set(x).size<2||new Set(y).size<2)g.bad('x','varijable ne smiju biti konstantne');
+  run(g){const x=g.vec('x',{min:3}),y=g.vec('y',{min:3}),al=g.num('alpha',{gt:0,max:0.5});if(x.length!==y.length)g.bad('y','x i y moraju imati isti broj vrijednosti');if(new Set(x).size<2)g.bad('x','x varijabla ne smije biti konstantna');if(new Set(y).size<2)g.bad('y','y varijabla ne smije biti konstantna');
    return{code:`x <- ${rv(x)}\ny <- ${rv(y)}\nn <- length(x)\nSxx <- sum((x - mean(x))^2); Syy <- sum((y - mean(y))^2); Sxy <- sum((x - mean(x)) * (y - mean(y)))\nr <- cor(x, y)\nct <- cor.test(x, y)\nprint(ct)\ncat("r =", r, "\\n")`,
    hidden:`H("Sxx", Sxx); H("Syy", Syy); H("Sxy", Sxy); H("r", r); H("t", ct$statistic); H("df", ct$parameter); H("p", ct$p.value); H("beta", Sxy / Sxx); H("alpha", mean(y) - Sxy / Sxx * mean(x))`,
    tex(v){const r=v.x('r'),p=v.x('p'),n=x.length,ar=Math.abs(r),js=ar>=.75?'visoka':ar>=.3?'umjerena':'niska';return{analiza:[L`Uparenih podataka: \(n=${n}\). Testira se \(H_0:\rho=0\) protiv \(H_1:\rho\ne0\).`],formula:[L`r=\frac{S_{xy}}{\sqrt{S_{xx}S_{yy}}},\qquad T=\frac{r\sqrt{n-2}}{\sqrt{1-r^2}}\sim t(n-2)`],
@@ -433,7 +439,7 @@ const CATS=[
 ];
 
 /* ===================== OBJAŠNJENJA R FUNKCIJA ===================== */
-const FN={table:'prebrojava pojavljivanja svake vrijednosti (tablica frekvencija); table(x)/length(x) daje relativne frekvencije.',cumsum:'kumulativni zbroj, npr. kumulativne relativne frekvencije.',mean:'aritmetička sredina podataka.',median:'medijan (srednji podatak sortiranog niza).',var:'uzoračka varijanca s dijeljenjem s n − 1.',sd:'uzoračka standardna devijacija, √var.',range:'najmanja i najveća vrijednost; diff(range(x)) je raspon.',quantile:'percentili/kvartili; type = 2 odgovara definiciji iz skripte (sredina dvaju podataka kad np je cijeli broj).',summary:'min, kvartili (type 7), medijan i sredina.',sort:'sortira podatke uzlazno.',choose:'binomni koeficijent C(n, k).',factorial:'faktorijel n!.',prod:'umnožak elemenata vektora (npr. padajući faktorijel).',pbirthday:'vjerojatnost da barem dvije od n osoba imaju rođendan isti dan.',dbinom:'binomna vjerojatnost P(X = k).',pbinom:'binomna funkcija distribucije P(X ≤ k).',dpois:'Poissonova vjerojatnost P(X = k).',ppois:'Poissonova funkcija distribucije.',dgeom:'geometrijska razdioba u R-u broji neuspjehe prije prvog uspjeha, zato k − 1.',pgeom:'geometrijska funkcija distribucije (broj neuspjeha).',dhyper:'hipergeometrijska P(X = k): dhyper(k, plavih, crvenih, n).',phyper:'hipergeometrijska funkcija distribucije.',dunif:'gustoća uniformne razdiobe.',punif:'funkcija distribucije uniformne razdiobe.',qunif:'kvantili uniformne razdiobe.',dnorm:'gustoća normalne razdiobe (parametri: sredina i standardna devijacija).',pnorm:'funkcija distribucije normalne razdiobe Φ.',qnorm:'kvantilna funkcija Φ⁻¹.',dexp:'gustoća eksponencijalne razdiobe.',pexp:'funkcija distribucije eksponencijalne razdiobe.',qexp:'kvantili eksponencijalne razdiobe.',pt:'funkcija distribucije t-razdiobe (za p-vrijednosti).',qt:'kvantili t-razdiobe (kritične vrijednosti).','t.test':'t-test o očekivanju jednog uzorka ili Welchov test za dva uzorka.','cor.test':'test hipoteze ρ = 0 za Pearsonovu korelaciju.',lm:'linearni model y ~ x metodom najmanjih kvadrata.',cor:'Pearsonov koeficijent korelacije.',outer:'vanjski umnožak vektora (svi parovi xⱼ·yᵢ).',colSums:'zbrojevi stupaca matrice (marginalna razdioba od X).',rowSums:'zbrojevi redaka matrice (marginalna razdioba od Y).',sum:'zbroj elemenata.',switch:'bira izraz prema odabranoj opciji.',ecdf:'računa empirijsku funkciju distribucije (ECDF) za uzorak.'};
+const FN={table:'prebrojava pojavljivanja svake vrijednosti (tablica frekvencija); table(x)/length(x) daje relativne frekvencije.',cumsum:'kumulativni zbroj, npr. kumulativne relativne frekvencije.',mean:'aritmetička sredina podataka.',median:'medijan (srednji podatak sortiranog niza).',var:'uzoračka varijanca s dijeljenjem s n − 1.',sd:'uzoračka standardna devijacija, √var.',range:'najmanja i najveća vrijednost; diff(range(x)) je raspon.',quantile:'percentili/kvartili; type = 2 odgovara definiciji iz skripte (sredina dvaju podataka kad np je cijeli broj).',summary:'min, kvartili (type 7), medijan i sredina.',sort:'sortira podatke uzlazno.',choose:'binomni koeficijent C(n, k).',factorial:'faktorijel n!.',prod:'umnožak elemenata vektora (npr. padajući faktorijel).',pbirthday:'vjerojatnost da barem dvije od n osoba imaju rođendan isti dan.',dbinom:'binomna vjerojatnost P(X = k).',pbinom:'binomna funkcija distribucije P(X ≤ k).',dpois:'Poissonova vjerojatnost P(X = k).',ppois:'Poissonova funkcija distribucije.',dgeom:'geometrijska razdioba u R-u broji neuspjehe prije prvog uspjeha, zato k − 1.',pgeom:'geometrijska funkcija distribucije (broj neuspjeha).',dhyper:'hipergeometrijska P(X = k): dhyper(k, plavih, crvenih, n).',phyper:'hipergeometrijska funkcija distribucije.',dunif:'gustoća uniformne razdiobe.',punif:'funkcija distribucije uniformne razdiobe.',qunif:'kvantili uniformne razdiobe.',dnorm:'gustoća normalne razdiobe (parametri: sredina i standardna devijacija).',pnorm:'funkcija distribucije normalne razdiobe Φ.',qnorm:'kvantilna funkcija Φ⁻¹.',dexp:'gustoća eksponencijalne razdiobe.',pexp:'funkcija distribucije eksponencijalne razdiobe.',qexp:'kvantili eksponencijalne razdiobe.',pt:'funkcija distribucije t-razdiobe (za p-vrijednosti).',qt:'kvantili t-razdiobe (kritične vrijednosti).','t.test':'t-test o očekivanju jednog uzorka ili Welchov test za dva uzorka.','cor.test':'test hipoteze ρ = 0 za Pearsonovu korelaciju.',lm:'linearni model y ~ x metodom najmanjih kvadrata.',cor:'Pearsonov koeficijent korelacije.',outer:'vanjski umnožak vektora (svi parovi xⱼ·yᵢ).',colSums:'zbrojevi stupaca matrice (marginalna razdioba od X).',rowSums:'zbrojevi redaka matrice (marginalna razdioba od Y).',sum:'zbroj elemenata.',switch:'bira izraz prema odabranoj opciji.',ecdf:'računa empirijsku funkciju distribucije (ECDF) za uzorak.',exp:'eksponencijalna funkcija e^x (koristi se u stabilnom računu rođendanskog problema).',log:'prirodni logaritam.'};
 function funcsUsed(code){return Object.keys(FN).filter(k=>new RegExp('(^|[^\\w.])'+k.replace('.','\\.')+'\\s*\\(').test(code)).map(k=>[k,FN[k]]);}
 
 /* ===================== PRIPREMA / ZAVRŠETAK ===================== */
@@ -449,7 +455,7 @@ const webR=new WebR();let ready=false;
 (async()=>{try{await webR.init();ready=true;go.disabled=false;st.textContent='R je spreman ✔';st.className='ok';}
  catch(e){st.textContent='Greška pri pokretanju webR-a: '+e.message+' (potrebna je internetska veza i moderan preglednik)';st.className='err';}})();
 async function runR(script){const sh=await new webR.Shelter();try{const r=await sh.captureR(script,{withAutoprint:false});return r.output.filter(o=>o.type==='stdout'||o.type==='stderr').map(o=>o.data).join('\n');}finally{sh.purge();}}
-const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const esc=escH;
 let cat,prob;
 function fillProbs(){const c=CATS.find(x=>x.id===$('cat').value);$('prob').innerHTML=c.probs.map(p=>`<option value="${p.id}">${esc(p.lbl)}</option>`).join('');buildForm();}
 function buildForm(){cat=CATS.find(x=>x.id===$('cat').value);prob=cat.probs.find(p=>p.id===$('prob').value);
@@ -464,15 +470,16 @@ function buildForm(){cat=CATS.find(x=>x.id===$('cat').value);prob=cat.probs.find
 const vals=()=>Object.fromEntries(prob.fields.map(f=>[f.id,$('f_'+f.id).value]));
 function vis(){const v=vals();prob.fields.forEach(f=>{document.querySelector(`[data-f="${f.id}"]`).style.display=(!f.show||f.show(v))?'':'none';});}
 const card=(n,t,b)=>`<div class="card step"><h2>Korak ${n}: ${t}</h2>${b}</div>`;
-const disp=a=>a.map(s=>`<div>\\[${s}\\]</div>`).join('');
+const disp=a=>a.map(s=>`<div>\\[${esc(s)}\\]</div>`).join('');
 async function solve(){
  const out=$('out');go.disabled=true;out.innerHTML='<div class="card">Računam u R-u…</div>';
  try{const v=vals(),sv={};prob.fields.forEach(f=>{if(!f.show||f.show(v))sv[f.id]=v[f.id];});
   const prep=prepare(prob,sv),raw=await runR(prep.script),r=finalize(prep,raw);
-  out.innerHTML=card(1,'Analiza problema',`<p><b>${esc(prob.lbl)}</b></p>${r.analiza.map(a=>`<p>${a}</p>`).join('')}`)
+  if(window.MathJax&&MathJax.typesetClear)MathJax.typesetClear([out]);
+  out.innerHTML=card(1,'Analiza problema',`<p><b>${esc(prob.lbl)}</b></p>${r.analiza.map(a=>`<p>${esc(a)}</p>`).join('')}`)
    +card(2,'Matematička formula',disp(r.formula))
    +card(3,'Postupno uvrštavanje vrijednosti',disp(r.steps))
-   +card(4,'Konačni rezultat',`<div class="res">\\[${r.result}\\]</div>${r.chart}`)
+   +card(4,'Konačni rezultat',`<div class="res">\\[${esc(r.result)}\\]</div>${r.chart}`)
    +card(5,'Izvršeni R kod i objašnjenje',`<pre>${esc(r.rcode)}</pre><b>Ispis iz R-a:</b><pre class="out">${esc(r.out||'(nema ispisa)')}</pre>${r.funcs.length?'<b>Korištene R funkcije:</b>'+r.funcs.map(([k,d])=>`<div class="fn"><code>${esc(k)}()</code> – ${esc(d)}</div>`).join(''):''}`);
   if(window.MathJax&&MathJax.typesetPromise){await MathJax.startup.promise;await MathJax.typesetPromise([out]);}
  }catch(e){out.innerHTML=`<div class="card"><p class="err">Pogreška: ${esc(e.message||e)}</p></div>`;}
