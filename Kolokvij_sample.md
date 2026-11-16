@@ -158,7 +158,7 @@ Zbroj relativnih frekvencija mora biti jednak 1, odnosno 100%.
 
 ---
 
-## Zadatak 3 – Princip umnoška
+## Zadatak 3 – Princip umnoška (faktorijel)
 
 Biramo odjevnu kombinaciju koja uključuje:
 
@@ -665,7 +665,7 @@ $$
 
 ---
 
-## Zadatak 3 – Princip umnoška
+## Zadatak 3 – Princip umnoška (faktorijel)
 
 Od Pule do Beča putujemo preko Rijeke i Ljubljane.
 
