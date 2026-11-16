@@ -408,11 +408,11 @@ $$
 Vjerojatnosti pojedinačnih ishoda:
 
 $$
-P(1)=P(2)=P(5)=P(6)=\frac{1}{10}
+P(1)=P(2)=P(5)=P(6)=\frac{1}{6}
 $$
 
 $$
-P(3)=P(4)=\frac{3}{10}
+P(3)=P(4)=\frac{3}{6}
 $$
 
 Događaji:
@@ -446,7 +446,7 @@ P(A\cup B)=P(2)+P(3)+P(4)+P(5)+P(6)
 $$
 
 $$
-=\frac{1}{10}+\frac{3}{10}+\frac{3}{10}+\frac{1}{10}+\frac{1}{10}
+=\frac{1}{6}+\frac{3}{6}+\frac{3}{6}+\frac{1}{6}+\frac{1}{6}
 $$
 
 $$
