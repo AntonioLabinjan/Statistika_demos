@@ -1174,7 +1174,7 @@ $$
 
 ---
 
-## Zadatak 3 – Princip umnoška
+## Zadatak 3 – Princip umnoška (faktorijel)
 
 Pekarnica nudi sendviče kod kojih biramo:
 
