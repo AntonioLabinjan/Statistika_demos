@@ -72,6 +72,11 @@ $$
 Me=\frac{2+4}{2}=\boxed{3}
 $$
 
+-3,-2,0,1,2,4,4,5,6,9, 11
+
+Medijan: 4
+
+
 ### 4. 30%-tni percentil
 
 Koristimo pravilo:
