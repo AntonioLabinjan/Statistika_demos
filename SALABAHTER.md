@@ -3,10 +3,10 @@ Koristi se kada tražimo prosječnu vrijednost podataka.
 
 Formula:
 
-[
+$$
 \bar{x}=\frac{x_1+x_2+\cdots+x_n}{n}
 =\frac{1}{n}\sum_{i=1}^{n}x_i
-]
+$$
 
 Postupak:
 1. Zbroji sve vrijednosti.
@@ -15,9 +15,9 @@ Primjer:
 
 Podaci: 2, 4, 4, 6, 9
 
-[
+$$
 \bar{x}=\frac{2+4+4+6+9}{5}=\frac{25}{5}=5
-]
+$$
 Medijan je srednja vrijednost uređenog niza.
 
 Postupak:
@@ -29,15 +29,15 @@ Formule:
 
 Za neparan broj podataka:
 
-[
+$$
 Me=x_{\frac{n+1}{2}}
-]
+$$
 
 Za paran broj podataka:
 
-[
+$$
 Me=\frac{x_{\frac n2}+x_{\frac n2+1}}{2}
-]
+$$
 
 Primjer:
 - 2, 4, 5, 7, 9 → medijan je 5.
@@ -48,9 +48,9 @@ Primjer:
 
 Podaci: 2, 4, 4, 5, 7, 7, 7, 9
 
-[
+$$
 Mo=7
-]
+$$
 
 Moguće je da:
 - postoji jedan mod;
@@ -61,17 +61,17 @@ Percentil (P_p) označava vrijednost ispod koje se nalazi određeni dio uređeni
 Postupak:
 1. Poredaj podatke uzlazno.
 2. Izračunaj poziciju:
-[
+$$
 k=\frac{p}{100}\cdot n
-]
+$$
 3. Odredi percentil prema pravilu koje se koristi na kolegiju.
 Konvencija iz primjera u ovim zadacima:
 
 Ako je (k) cijeli broj:
 
-[
+$$
 P_p=\frac{x_k+x_{k+1}}{2}
-]
+$$
 
 Primjer:
 
@@ -79,29 +79,29 @@ Podaci: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 
 Tražimo (P_{30}):
 
-[
+$$
 k=0.30\cdot10=3
-]
+$$
 
-[
+$$
 P_{30}=\frac{x_3+x_4}{2}
 =\frac{3+4}{2}=3.5
-]
+$$
 
 PAŽNJA: Ovo je konvencija korištena u dostavljenim primjerima. Različiti udžbenici i alati mogu koristiti druge metode računanja percentila. Za ne-cjelobrojnu poziciju slijedi pravilo koje je definirao nastavnik.
 Varijanca mjeri raspršenost podataka oko aritmetičke sredine.
 
 Varijanca populacije:
 
-[
+$$
 \sigma^2=\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2
-]
+$$
 
 Varijanca uzorka:
 
-[
+$$
 s^2=\frac{1}{n-1}\sum_{i=1}^{n}(x_i-\bar{x})^2
-]
+$$
 
 Postupak:
 1. Izračunaj aritmetičku sredinu.
@@ -113,42 +113,42 @@ Važno:
 
 Ako su sve vrijednosti transformirane formulom:
 
-[
+$$
 Y=aX+b
-]
+$$
 
 onda vrijedi:
 
-[
+$$
 Var(Y)=a^2Var(X)
-]
+$$
 
 Dodavanje konstante ne mijenja varijancu, a množenje s a množi varijancu s (a^2).
 Koriste se kada treba analizirati koliko se puta pojavljuje pojedina vrijednost ili kategorija.
 Označava broj pojavljivanja određene vrijednosti.
 
-[
+$$
 f_i=\text{broj pojavljivanja vrijednosti }x_i
-]
+$$
 Označava udio pojavljivanja određene vrijednosti u ukupnom skupu.
 
-[
+$$
 h_i=\frac{f_i}{n}
-]
+$$
 
 Za postotak:
 
-[
+$$
 h_i(%)=\frac{f_i}{n}\cdot100
-]
+$$
 Označava ukupan broj pojavljivanja do određene vrijednosti.
 
-[
+$$
 F_i=\sum_{j=1}^{i}f_j
-]
-[
+$$
+$$
 H_i=\sum_{j=1}^{i}h_j
-]
+$$
 
 Primjer:
 
@@ -161,28 +161,28 @@ Vrijednost	Aps. frekvencija	Rel. frekvencija	Kumulativna frekvencija
 Ukupno	8	100%	
 Provjera:
 
-[
+$$
 \sum f_i=n
-]
+$$
 
-[
+$$
 \sum h_i=1
-]
+$$
 Koristi se kada se postupak sastoji od više uzastopnih izbora.
 
 Ako prvi korak ima (n_1) mogućnosti, drugi (n_2), a treći (n_3), ukupan broj mogućnosti je:
 
-[
+$$
 N=n_1\cdot n_2\cdot n_3
-]
+$$
 
 Primjer 1 — PIN:
 
 PIN ima 4 znamenke. Svaka znamenka može biti od 0 do 9, a ponavljanje je dopušteno.
 
-[
+$$
 N=10\cdot10\cdot10\cdot10=10^4=10000
-]
+$$
 
 Primjer 2 — odjeća:
 
@@ -190,9 +190,9 @@ Na raspolaganju su:
 - 3 majice;
 - 4 hlače;
 - 2 para cipela.
-[
+$$
 N=3\cdot4\cdot2=24
-]
+$$
 
 Kako prepoznati zadatak?
 
@@ -203,9 +203,9 @@ Događaji (A) i (B) su neovisni ako ostvarenje jednog ne utječe na vjerojatnost
 
 Uvjet neovisnosti:
 
-[
+$$
 P(A\cap B)=P(A)\cdot P(B)
-]
+$$
 
 Postupak:
 1. Izračunaj (P(A)).
@@ -215,38 +215,38 @@ Postupak:
 Ako vrijedi, događaji su neovisni. Ako ne vrijedi, događaji su ovisni.
 Tri događaja (A), (B) i (C) međusobno su neovisna ako vrijedi:
 
-[
+$$
 P(A\cap B)=P(A)P(B)
-]
+$$
 
-[
+$$
 P(A\cap C)=P(A)P(C)
-]
+$$
 
-[
+$$
 P(B\cap C)=P(B)P(C)
-]
+$$
 
 i dodatno:
 
-[
+$$
 P(A\cap B\cap C)=P(A)P(B)P(C)
-]
+$$
 
 Važno: Provjera samo parova nije dovoljna za dokaz međusobne neovisnosti triju događaja.
 
 Za dokaz da događaji NISU međusobno neovisni dovoljno je pronaći samo jednu jednakost koja ne vrijedi.
 Vjerojatnost događaja (A) pod uvjetom da se dogodio događaj (B):
 
-[
+$$
 P(A|B)=\frac{P(A\cap B)}{P(B)}
-]
+$$
 
 Uvjet je:
 
-[
+$$
 P(B)>0
-]
+$$
 
 Kako prepoznati zadatak?
 
@@ -257,28 +257,28 @@ Izrazi poput:
 Obično upućuju na uvjetnu vjerojatnost.
 Iz definicije uvjetne vjerojatnosti:
 
-[
+$$
 P(A\cap B)=P(A|B)\cdot P(B)
-]
+$$
 
 Također:
 
-[
+$$
 P(A\cap B)=P(B|A)\cdot P(A)
-]
+$$
 
 Koristi se kada poznajemo vjerojatnost jednog događaja i uvjetnu vjerojatnost drugog.
 Ako događaji (A_1,A_2,\ldots,A_n) čine potpunu particiju prostora uzorka, vrijedi:
 
-[
+$$
 P(B)=\sum_{i=1}^{n}P(B|A_i)P(A_i)
-]
+$$
 
 Za dva događaja:
 
-[
+$$
 P(B)=P(B|A)P(A)+P(B|\overline A)P(\overline A)
-]
+$$
 
 Kako prepoznati zadatak?
 - Proizvodi dolaze iz više tvornica.
@@ -293,19 +293,19 @@ Postupak:
 5. Zbroji rezultate.
 Koristi se kada znamo da se dogodio neki rezultat, a želimo odrediti iz kojeg izvora ili skupine potječe.
 
-[
+$$
 P(A_i|B)=\frac{P(B|A_i)P(A_i)}{P(B)}
-]
+$$
 
 Nazivnik se često računa formulom totalne vjerojatnosti.
 
 Za dvije skupine:
 
-[
+$$
 P(A|B)=
 \frac{P(B|A)P(A)}
 {P(B|A)P(A)+P(B|\overline A)P(\overline A)}
-]
+$$
 
 Primjer — proizvodnja:
 
@@ -317,140 +317,140 @@ Tražimo vjerojatnost da neispravan dio dolazi sa stroja 3.
 
 Prvo računamo ukupnu vjerojatnost neispravnog dijela:
 
-[
+$$
 P(D)=0.5\cdot0.01+0.3\cdot0.02+0.2\cdot0.05
-]
+$$
 
-[
+$$
 P(D)=0.005+0.006+0.010=0.021
-]
+$$
 
 Zatim primjenjujemo Bayesov teorem:
 
-[
+$$
 P(A_3|D)=\frac{0.05\cdot0.2}{0.021}
-]
+$$
 
-[
+$$
 P(A_3|D)=\frac{0.01}{0.021}\approx0.4762
-]
+$$
 
 Odgovor: približno 47.62%.
 
 Najčešća pogreška: Zamjena (P(A|B)) i (P(B|A)). To nisu iste vjerojatnosti!
 Događa se (A) ILI (B), odnosno barem jedan od događaja.
 
-[
+$$
 A\cup B
-]
+$$
 
 Formula:
 
-[
+$$
 P(A\cup B)=P(A)+P(B)-P(A\cap B)
-]
+$$
 
 Ako su događaji disjunktni:
 
-[
+$$
 P(A\cup B)=P(A)+P(B)
-]
+$$
 Događaju se (A) I (B).
 
-[
+$$
 A\cap B
-]
+$$
 
 Ako su događaji neovisni:
 
-[
+$$
 P(A\cap B)=P(A)P(B)
-]
+$$
 
 PAŽNJA: Ova formula vrijedi za neovisne događaje. Za općenite događaje koristi se uvjetna vjerojatnost ili druga poznata informacija.
 Događa se sve osim događaja (A).
 
-[
+$$
 A^c \quad \text{ili} \quad \overline A
-]
+$$
 
 Formula:
 
-[
+$$
 P(A^c)=1-P(A)
-]
+$$
 
 Trik za zadatke:
 
 Izraz „barem jedan” često je jednostavnije riješiti preko komplementa:
 
-[
+$$
 P(\text{barem jedan})=1-P(\text{nijedan})
-]
+$$
 
 Primjer:
 
 Vjerojatnost da se pogodi meta u jednom pokušaju je 0.8. Izvedena su dva neovisna pokušaja.
 
-[
+$$
 P(\text{barem jedan pogodak})
 =1-P(\text{nijedan pogodak})
-]
+$$
 
-[
+$$
 =1-(0.2\cdot0.2)=0.96
-]
+$$
 Događa se (A), ali ne i (B).
 
-[
+$$
 A\setminus B=A\cap B^c
-]
+$$
 
 Formula:
 
-[
+$$
 P(A\setminus B)=P(A)-P(A\cap B)
-]
+$$
 Događaji su disjunktni ako se ne mogu dogoditi istovremeno.
 
-[
+$$
 A\cap B=\varnothing
-]
+$$
 
-[
+$$
 P(A\cap B)=0
-]
+$$
 
 Za disjunktne događaje:
 
-[
+$$
 P(A\cup B)=P(A)+P(B)
-]
+$$
 
 VAŽNO: Disjunktnost i neovisnost nisu isto. Ako su dva događaja disjunktna i oba imaju pozitivnu vjerojatnost, nisu neovisna.
 Ako zadatak daje skup mogućih ishoda, prvo definiraj prostor uzorka:
 
-[
+$$
 \Omega={\omega_1,\omega_2,\ldots,\omega_n}
-]
+$$
 
 Događaj je podskup prostora uzorka:
 
-[
+$$
 A\subseteq\Omega
-]
+$$
 
 Vjerojatnost događaja računa se zbrajanjem vjerojatnosti njegovih elementarnih ishoda:
 
-[
+$$
 P(A)=\sum_{\omega_i\in A}P(\omega_i)
-]
+$$
 
 Ako su svi ishodi jednako vjerojatni:
 
-[
+$$
 P(A)=\frac{|A|}{|\Omega|}
-]
+$$
 
 Ako ishodi nisu jednako vjerojatni:
 
@@ -458,43 +458,43 @@ Ne smiješ koristiti omjer broja povoljnih i ukupnih ishoda. Moraš zbrojiti zad
 
 Provjera raspodjele:
 
-[
+$$
 \sum_{\omega_i\in\Omega}P(\omega_i)=1
-]
+$$
 
 Ako zbroj nije 1, negdje postoji pogreška ili nedostaje informacija.
 Kod izvlačenja bez vraćanja broj dostupnih elemenata mijenja se nakon svakog izvlačenja.
 
 Ako imamo (B) crnih i (W) bijelih kuglica:
 
-[
+$$
 N=B+W
-]
+$$
 
 Vjerojatnost izvlačenja crne kuglice u prvom izvlačenju:
 
-[
+$$
 P(C_1)=\frac{B}{N}
-]
+$$
 
 Ako se kuglica ne vraća, vjerojatnost crne kuglice u drugom izvlačenju, pod uvjetom da je prva bila crna:
 
-[
+$$
 P(C_2|C_1)=\frac{B-1}{N-1}
-]
+$$
 
 Vjerojatnost da su obje crne:
 
-[
+$$
 P(C_1\cap C_2)=\frac{B}{N}\cdot\frac{B-1}{N-1}
-]
+$$
 
 Za tri uzastopne crne kuglice:
 
 \frac{B}{N}\cdot
 \frac{B-1}{N-1}\cdot
 \frac{B-2}{N-2}
-]
+$$
 
 PAŽNJA: Bez vraćanja izvlačenja nisu neovisna!
 Ako zadatak traži...	Koristi...
