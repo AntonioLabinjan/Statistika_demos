@@ -68,7 +68,7 @@ Mod je vrijednost koja se pojavljuje najviše puta.
 Podaci: 2, 4, 4, 4, 5, 7, 7, 7, 9
 
 $$
-Mo=7
+Mo=7 i 4
 $$
 
 Moguće je da:
