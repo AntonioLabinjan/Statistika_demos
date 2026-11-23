@@ -65,7 +65,7 @@ Mod je vrijednost koja se pojavljuje najviše puta.
 
 **Primjer:**
 
-Podaci: 2, 4, 4, 5, 7, 7, 7, 9
+Podaci: 2, 4, 4, 4, 5, 7, 7, 7, 9
 
 $$
 Mo=7
